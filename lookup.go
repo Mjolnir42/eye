@@ -70,7 +70,7 @@ func (l *Lookup) Close() {
 
 // GetConfigurationID returns matching monitoring profile ConfigurationIDs
 // if any exist.
-func (l *Lookup) GetConfigurationID(lookID, metric string) ([]string, error) {
+func (l *Lookup) GetConfigurationID(lookID string) ([]string, error) {
 	IDList := []string{}
 
 	// try to serve the request from the local redis cache
@@ -80,9 +80,7 @@ func (l *Lookup) GetConfigurationID(lookID, metric string) ([]string, error) {
 	}
 
 	for k := range thresh {
-		if metric == thresh[k].Metric {
-			IDList = append(IDList, thresh[k].ID)
-		}
+		IDList = append(IDList, thresh[k].ID)
 	}
 	return IDList, nil
 }

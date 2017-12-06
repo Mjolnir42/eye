@@ -68,30 +68,23 @@ func (l *Lookup) Close() {
 	l.redis.Close()
 }
 
-// GetConfigurationID returns a unique monitoring profile
-// ConfigurationID if it exists. If multiple matching profiles
-// exist, it returns as if there was none.
-func (l *Lookup) GetConfigurationID(lookID, metric string) (string, error) {
+// GetConfigurationID returns matching monitoring profile ConfigurationIDs
+// if any exist.
+func (l *Lookup) GetConfigurationID(lookID, metric string) ([]string, error) {
+	IDList := []string{}
+
 	// try to serve the request from the local redis cache
 	thresh, err := l.processRequest(lookID)
 	if err == ErrUnconfigured {
-		return ``, ErrUnconfigured
-	} else if err != nil {
-		return ``, err
+		return IDList, err
 	}
 
-	profiles := []string{}
 	for k := range thresh {
 		if metric == thresh[k].Metric {
-			profiles = append(profiles, thresh[k].ID)
+			IDList = append(IDList, thresh[k].ID)
 		}
 	}
-	if len(profiles) == 1 {
-		return profiles[0], nil
-	}
-
-	// lookup must be unique
-	return ``, ErrUnconfigured
+	return IDList, nil
 }
 
 // LookupThreshold queries the full monitoring profile data

@@ -87,13 +87,13 @@ func (l *Lookup) GetConfigurationID(lookID string) ([]string, error) {
 
 // LookupThreshold queries the full monitoring profile data
 // for lookID
-func (l *Lookup) LookupThreshold(lookID string) (map[string]eyeproto.Threshold, error) {
+func (l *Lookup) LookupThreshold(lookID string) (map[string]Threshold, error) {
 	return l.processRequest(lookID)
 }
 
 // processRequest handles the multi-stage lookup of querying the
 // cache, the profile server and keeps the cache updated
-func (l *Lookup) processRequest(lookID string) (map[string]eyeproto.Threshold, error) {
+func (l *Lookup) processRequest(lookID string) (map[string]Threshold, error) {
 	// fetch from local cache
 	thr, err := l.lookupRedis(lookID)
 	if err == nil {
@@ -125,8 +125,8 @@ func (l *Lookup) processRequest(lookID string) (map[string]eyeproto.Threshold, e
 }
 
 // lookupRedis queries the Redis profile cache
-func (l *Lookup) lookupRedis(lookID string) (map[string]eyeproto.Threshold, error) {
-	res := make(map[string]eyeproto.Threshold)
+func (l *Lookup) lookupRedis(lookID string) (map[string]Threshold, error) {
+	res := make(map[string]Threshold)
 	data, err := l.redis.HGetAllMap(lookID).Result()
 	if err != nil {
 		return nil, err
@@ -147,7 +147,7 @@ dataloop:
 			return nil, err
 		}
 
-		t := eyeproto.Threshold{}
+		t := Threshold{}
 		err = json.Unmarshal([]byte(val), &t)
 		if err != nil {
 			return nil, err
@@ -202,9 +202,9 @@ func (l *Lookup) lookupEye(lookID string) (*eyeproto.ConfigurationData, error) {
 	return data, nil
 }
 
-// process converts t into eyeproto.Threshold and stores it in the
+// process converts t into Threshold and stores it in the
 // local cache if available
-func (l *Lookup) process(lookID string, t *eyeproto.ConfigurationData) (map[string]eyeproto.Threshold, error) {
+func (l *Lookup) process(lookID string, t *eyeproto.ConfigurationData) (map[string]Threshold, error) {
 	if t.Configurations == nil {
 		return nil, fmt.Errorf(`lookup.process received t.Configurations == nil`)
 	}
@@ -214,9 +214,9 @@ func (l *Lookup) process(lookID string, t *eyeproto.ConfigurationData) (map[stri
 		}
 		return nil, ErrUnconfigured
 	}
-	res := make(map[string]eyeproto.Threshold)
+	res := make(map[string]Threshold)
 	for _, i := range t.Configurations {
-		t := eyeproto.Threshold{
+		t := Threshold{
 			ID:             i.ConfigurationItemID,
 			Metric:         i.Metric,
 			HostID:         i.HostID,
@@ -261,7 +261,7 @@ func (l *Lookup) setUnconfigured(lookID string) error {
 }
 
 // storeThreshold writes t into the local cache
-func (l *Lookup) storeThreshold(lookID string, t *eyeproto.Threshold) error {
+func (l *Lookup) storeThreshold(lookID string, t *Threshold) error {
 	buf, err := json.Marshal(t)
 	if err != nil {
 		return err

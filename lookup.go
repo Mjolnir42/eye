@@ -99,6 +99,38 @@ func (l *Lookup) LookupThreshold(lookID string) (map[string]Threshold, error) {
 	return l.processRequest(lookID)
 }
 
+// WaitEye blocks until it can perform a valid lookup in eye
+func (l *Lookup) WaitEye() {
+	retryDelay := 50 * time.Millisecond
+	client := &http.Client{}
+	for {
+		<-time.After(retryDelay)
+		retryDelay = 5 * time.Second
+
+		req, err := http.NewRequest(`GET`, fmt.Sprintf(
+			"http://%s:%s/api/v1/item/",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+		), nil)
+		if err != nil {
+			continue
+		}
+		var resp *http.Response
+		if resp, err = client.Do(req); err != nil {
+			ioutil.ReadAll(resp.Body)
+			resp.Body.Close()
+			continue
+		}
+		// allow connection reuse
+		ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			break
+		}
+	}
+}
+
 // processRequest handles the multi-stage lookup of querying the
 // cache, the profile server and keeps the cache updated
 func (l *Lookup) processRequest(lookID string) (map[string]Threshold, error) {

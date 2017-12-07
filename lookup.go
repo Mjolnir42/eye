@@ -214,6 +214,7 @@ func (l *Lookup) lookupEye(lookID string) (*eyeproto.ConfigurationData, error) {
 	}
 
 	var resp *http.Response
+	defer resp.Body.Close()
 	if resp, err = client.Do(req); err != nil {
 		return nil, err
 	} else if resp.StatusCode == 400 {
@@ -232,7 +233,6 @@ func (l *Lookup) lookupEye(lookID string) (*eyeproto.ConfigurationData, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp.Body.Close()
 
 	data := &eyeproto.ConfigurationData{}
 	err = json.Unmarshal(buf, data)

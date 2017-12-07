@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/mjolnir42/erebos"
 	"github.com/mjolnir42/eyeproto"
 	redis "gopkg.in/redis.v3"
@@ -36,6 +37,7 @@ var (
 // Lookup provides a query library to retrieve data from Eye
 type Lookup struct {
 	Config       *erebos.Config
+	log          *logrus.Logger
 	redis        *redis.Client
 	cacheTimeout time.Duration
 }
@@ -44,6 +46,7 @@ type Lookup struct {
 func NewLookup(conf *erebos.Config) *Lookup {
 	return &Lookup{
 		Config: conf,
+		log:    nil,
 	}
 }
 
@@ -66,6 +69,11 @@ func (l *Lookup) Start() error {
 // Close shuts down the Redis connection
 func (l *Lookup) Close() {
 	l.redis.Close()
+}
+
+// SetLogger hands Lookup the logger to use
+func (l *Lookup) SetLogger(logger *logrus.Logger) {
+	l.log = logger
 }
 
 // GetConfigurationID returns matching monitoring profile ConfigurationIDs
@@ -101,8 +109,10 @@ func (l *Lookup) processRequest(lookID string) (map[string]Threshold, error) {
 	} else if err == ErrUnconfigured {
 		return nil, ErrUnconfigured
 	} else if err != ErrNotFound {
-		// genuine error condition
-		return nil, err
+		// genuine error condition, defer to profile server
+		if l.log != nil {
+			l.log.Errorf("eyewall/cache: %s", err.Error())
+		}
 	}
 
 	// local cache did not hit or was not available
@@ -177,9 +187,7 @@ func (l *Lookup) lookupEye(lookID string) (*eyeproto.ConfigurationData, error) {
 	} else if resp.StatusCode == 400 {
 		return nil, fmt.Errorf(`Lookup: malformed LookupID`)
 	} else if resp.StatusCode == 404 {
-		if err = l.setUnconfigured(lookID); err != nil {
-			return nil, err
-		}
+		l.setUnconfigured(lookID)
 		return nil, ErrUnconfigured
 	} else if resp.StatusCode >= 500 {
 		return nil, fmt.Errorf(
@@ -209,9 +217,7 @@ func (l *Lookup) process(lookID string, t *eyeproto.ConfigurationData) (map[stri
 		return nil, fmt.Errorf(`lookup.process received t.Configurations == nil`)
 	}
 	if len(t.Configurations) == 0 {
-		if err := l.setUnconfigured(lookID); err != nil {
-			return nil, err
-		}
+		l.setUnconfigured(lookID)
 		return nil, ErrUnconfigured
 	}
 	res := make(map[string]Threshold)
@@ -233,38 +239,43 @@ func (l *Lookup) process(lookID string, t *eyeproto.ConfigurationData) (map[stri
 			t.Predicate = tl.Predicate
 			t.Thresholds[lvl] = tl.Value
 		}
-		if err := l.storeThreshold(lookID, &t); err != nil {
-			return nil, err
-		}
+		l.storeThreshold(lookID, &t)
 		res[t.ID] = t
 	}
 	return res, nil
 }
 
 // setUnconfigured writes a negative cache entry into the local cache
-func (l *Lookup) setUnconfigured(lookID string) error {
+func (l *Lookup) setUnconfigured(lookID string) {
 	if _, err := l.redis.HSet(
 		lookID,
 		`unconfigured`,
 		time.Now().UTC().Format(time.RFC3339),
 	).Result(); err != nil {
-		return err
+		if l.log != nil {
+			l.log.Errorf("eyewall/cache: %s", err.Error())
+		}
+		return
 	}
 
 	if _, err := l.redis.Expire(
 		lookID,
 		l.cacheTimeout,
 	).Result(); err != nil {
-		return err
+		if l.log != nil {
+			l.log.Errorf("eyewall/cache: %s", err.Error())
+		}
 	}
-	return nil
 }
 
 // storeThreshold writes t into the local cache
-func (l *Lookup) storeThreshold(lookID string, t *Threshold) error {
+func (l *Lookup) storeThreshold(lookID string, t *Threshold) {
 	buf, err := json.Marshal(t)
 	if err != nil {
-		return err
+		if l.log != nil {
+			l.log.Errorf("eyewall/cache: %s", err.Error())
+		}
+		return
 	}
 
 	if _, err := l.redis.Set(
@@ -272,7 +283,10 @@ func (l *Lookup) storeThreshold(lookID string, t *Threshold) error {
 		string(buf),
 		l.cacheTimeout,
 	).Result(); err != nil {
-		return err
+		if l.log != nil {
+			l.log.Errorf("eyewall/cache: %s", err.Error())
+		}
+		return
 	}
 
 	if _, err := l.redis.HSet(
@@ -280,16 +294,20 @@ func (l *Lookup) storeThreshold(lookID string, t *Threshold) error {
 		t.ID,
 		time.Now().UTC().Format(time.RFC3339),
 	).Result(); err != nil {
-		return err
+		if l.log != nil {
+			l.log.Errorf("eyewall/cache: %s", err.Error())
+		}
+		return
 	}
 
 	if _, err := l.redis.Expire(
 		lookID,
 		l.cacheTimeout,
 	).Result(); err != nil {
-		return err
+		if l.log != nil {
+			l.log.Errorf("eyewall/cache: %s", err.Error())
+		}
 	}
-	return nil
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

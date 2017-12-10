@@ -32,7 +32,15 @@ var (
 	// ErrUnconfigured is returned when the cache contains a negative
 	// caching entry or Eye returns the absence of a profile to look up
 	ErrUnconfigured = errors.New("eyewall.Lookup: unconfigured")
+	// beats is the map of heartbeats shared between all instances of
+	// Lookup. This way it can be ensured that all instances only move
+	// the timestamps forward in time.
+	beats heartbeatMap
 )
+
+func init() {
+	beats.hb = make(map[int]time.Time)
+}
 
 // Lookup provides a query library to retrieve data from Eye
 type Lookup struct {

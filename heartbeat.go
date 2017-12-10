@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+// heartbeatMap is a locked map that keeps track of timestamps
 type heartbeatMap struct {
 	hb   map[int]time.Time
 	lock sync.Mutex

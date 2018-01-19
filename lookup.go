@@ -21,9 +21,9 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/go-redis/redis"
 	"github.com/mjolnir42/erebos"
 	"github.com/mjolnir42/eyeproto"
-	redis "gopkg.in/redis.v3"
 )
 
 var (
@@ -183,7 +183,7 @@ func (l *Lookup) processRequest(lookID string) (map[string]Threshold, error) {
 // lookupRedis queries the Redis profile cache
 func (l *Lookup) lookupRedis(lookID string) (map[string]Threshold, error) {
 	res := make(map[string]Threshold)
-	data, err := l.redis.HGetAllMap(lookID).Result()
+	data, err := l.redis.HGetAll(lookID).Result()
 	if err != nil {
 		return nil, err
 	}

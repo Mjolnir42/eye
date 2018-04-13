@@ -18,6 +18,7 @@ type Result struct {
 	ID      uuid.UUID
 	Section string
 	Action  string
+	Code    uint16
 	Error   error
 	Super   Supervisor
 

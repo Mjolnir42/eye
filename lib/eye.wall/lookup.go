@@ -7,9 +7,9 @@
  * that can be found in the LICENSE file.
  */
 
-// Package eyewall provides a lookup library for threshold
+// Package wall provides a lookup library for threshold
 // configurations managed by eye
-package eyewall // import "github.com/mjolnir42/eyewall"
+package wall // import "github.com/mjolnir42/eye/lib/eye.wall"
 
 import (
 	"encoding/json"
@@ -23,7 +23,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/go-redis/redis"
 	"github.com/mjolnir42/erebos"
-	"github.com/mjolnir42/eyeproto"
+	proto "github.com/mjolnir42/eye/lib/eye.proto"
 )
 
 var (
@@ -214,7 +214,7 @@ dataloop:
 }
 
 // lookupEye queries the Eye monitoring profile server
-func (l *Lookup) lookupEye(lookID string) (*eyeproto.ConfigurationData, error) {
+func (l *Lookup) lookupEye(lookID string) (*proto.ConfigurationData, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest(`GET`, fmt.Sprintf(
 		"http://%s:%s/%s/%s",
@@ -248,7 +248,7 @@ func (l *Lookup) lookupEye(lookID string) (*eyeproto.ConfigurationData, error) {
 		return nil, err
 	}
 
-	data := &eyeproto.ConfigurationData{}
+	data := &proto.ConfigurationData{}
 	err = json.Unmarshal(buf, data)
 	if err != nil {
 		return nil, err
@@ -258,7 +258,7 @@ func (l *Lookup) lookupEye(lookID string) (*eyeproto.ConfigurationData, error) {
 
 // process converts t into Threshold and stores it in the
 // local cache if available
-func (l *Lookup) process(lookID string, t *eyeproto.ConfigurationData) (map[string]Threshold, error) {
+func (l *Lookup) process(lookID string, t *proto.ConfigurationData) (map[string]Threshold, error) {
 	if t.Configurations == nil {
 		return nil, fmt.Errorf(`lookup.process received t.Configurations == nil`)
 	}

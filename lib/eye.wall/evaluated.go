@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package eyewall // import "github.com/mjolnir42/eyewall"
+package wall // import "github.com/mjolnir42/eye/lib/eye.wall"
 
 import (
 	"time"

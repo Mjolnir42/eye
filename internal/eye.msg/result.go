@@ -24,7 +24,9 @@ type Result struct {
 // FromRequest ...
 func FromRequest(rq *Request) Result {
 	return Result{
-		ID: rq.ID,
+		ID:      rq.ID,
+		Section: rq.Section,
+		Action:  rq.Action,
 	}
 }
 

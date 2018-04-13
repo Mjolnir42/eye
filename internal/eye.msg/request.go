@@ -18,8 +18,11 @@ import (
 // Request represents the internal request metadata
 type Request struct {
 	ID         uuid.UUID
+	Section    string
+	Action     string
 	RemoteAddr string
 	AuthUser   string
+	Super      Supervisor
 	Reply      chan Result
 }
 

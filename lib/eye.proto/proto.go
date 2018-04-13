@@ -1,14 +1,14 @@
 /*-
  * Copyright © 2016, 1&1 Internet SE
- * Copyright © 2016,2017, Jörg Pernfuß <code.jpe@gmail.com>
+ * Copyright © 2016-2018, Jörg Pernfuß <code.jpe@gmail.com>
  * All rights reserved.
  *
  * Use of this source code is governed by a 2-clause BSD license
  * that can be found in the LICENSE file.
  */
 
-// Package eyeproto implements the protocol datastructures for eye
-package eyeproto
+// Package proto implements the protocol datastructures for eye
+package proto // import "github.com/mjolnir42/eye/internal/eye.proto"
 
 // ConfigurationData contains a list of ConfigurationItems as returned
 // by the eye service

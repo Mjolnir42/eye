@@ -1,0 +1,100 @@
+/*-
+ * Copyright (c) 2018, 1&1 Internet SE
+ * All rights reserved
+ *
+ * Use of this source code is governed by a 2-clause BSD license
+ * that can be found in the LICENSE file.
+ */
+
+package rest // import "github.com/mjolnir42/eye/internal/eye.rest"
+
+import (
+	"bytes"
+	"encoding/base64"
+	"log"
+	"net/http"
+	"strings"
+
+	"github.com/julienschmidt/httprouter"
+	"github.com/mjolnir42/eye/internal/eye"
+	msg "github.com/mjolnir42/eye/internal/eye.msg"
+	uuid "github.com/satori/go.uuid"
+)
+
+// BasicAuth handles HTTP BasicAuth on requests
+func (x *Rest) BasicAuth(h httprouter.Handle) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request,
+		ps httprouter.Params) {
+		const basicAuthPrefix string = "Basic "
+		var supervisor eye.Handler
+
+		// generate and record the requestID
+		requestID := uuid.Must(uuid.NewV4())
+		ps = append(ps, httprouter.Param{
+			Key:   `RequestID`,
+			Value: requestID.String(),
+		})
+
+		// if the supervisor is not available, no requests are accepted
+		if supervisor = x.handlerMap.Get(`supervisor`); supervisor == nil {
+			http.Error(w, `Authentication supervisor not available`,
+				http.StatusServiceUnavailable)
+			return
+		}
+
+		// Get credentials
+		auth := r.Header.Get("Authorization")
+		if strings.HasPrefix(auth, basicAuthPrefix) {
+			// Check credentials
+			payload, err := base64.StdEncoding.DecodeString(
+				auth[len(basicAuthPrefix):],
+			)
+			if err == nil {
+				pair := bytes.SplitN(payload, []byte(":"), 2)
+				if len(pair) == 2 {
+					request := msg.New(r, ps)
+					request.Section = msg.SectionSupervisor
+					request.Action = msg.ActionAuthenticate
+					request.Super = msg.Supervisor{
+						Task: msg.TaskBasicAuth,
+						BasicAuth: struct {
+							User  []byte
+							Token []byte
+						}{
+							User:  pair[0],
+							Token: pair[1],
+						},
+					}
+					supervisor.Intake() <- request
+
+					result := <-request.Reply
+					if result.Error != nil {
+						log.Println(result.Error.Error()) // XXX
+					}
+
+					if result.Super.Verdict == msg.VerdictOK {
+						// record the authenticated user
+						ps = append(ps, httprouter.Param{
+							Key:   `AuthenticatedUser`,
+							Value: string(pair[0]),
+						})
+						// record the used token
+						ps = append(ps, httprouter.Param{
+							Key:   `AuthenticatedToken`,
+							Value: string(pair[1]),
+						})
+						// Delegate request to given handle
+						h(w, r, ps)
+						return
+					}
+				}
+			}
+		}
+
+		w.Header().Set("WWW-Authenticate", "Basic realm=Restricted")
+		http.Error(w, http.StatusText(http.StatusUnauthorized),
+			http.StatusUnauthorized)
+	}
+}
+
+// vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

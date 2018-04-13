@@ -8,7 +8,7 @@
  */
 
 // Package proto implements the protocol datastructures for eye
-package proto // import "github.com/mjolnir42/eye/internal/eye.proto"
+package proto // import "github.com/mjolnir42/eye/lib/eye.proto"
 
 // ConfigurationData contains a list of ConfigurationItems as returned
 // by the eye service

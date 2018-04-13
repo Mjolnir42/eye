@@ -9,6 +9,7 @@
 package msg // import "github.com/mjolnir42/eye/internal/eye.msg"
 
 import (
+	proto "github.com/mjolnir42/eye/lib/eye.proto"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -19,6 +20,8 @@ type Result struct {
 	Action  string
 	Error   error
 	Super   Supervisor
+
+	Configuration []proto.Configuration
 }
 
 // FromRequest ...

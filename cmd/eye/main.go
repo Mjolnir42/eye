@@ -115,7 +115,6 @@ func main() {
 	defer Eye.run.insertItem.Close()
 	defer Eye.run.insertLookup.Close()
 	defer Eye.run.itemCount.Close()
-	defer Eye.run.retrieve.Close()
 	defer Eye.run.updateItem.Close()
 	go pingDatabase()
 

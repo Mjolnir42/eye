@@ -105,10 +105,6 @@ func prepareStatements() {
 	log.Println("Preparing: item_count")
 	abortOnError(err)
 
-	Eye.run.retrieve, err = Eye.run.conn.Prepare(stmtRetrieveConfigurationsByLookup)
-	log.Println("Preparing: retrieve")
-	abortOnError(err)
-
 	Eye.run.updateItem, err = Eye.run.conn.Prepare(stmtUpdateConfigurationItem)
 	log.Println("Preparing: update_item")
 	abortOnError(err)

@@ -23,6 +23,14 @@ func dispatchForbidden(w *http.ResponseWriter, err error) {
 	http.Error(*w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 }
 
+func dispatchBadRequest(w *http.ResponseWriter, reason string) {
+	if reason != `` {
+		http.Error(*w, reason, http.StatusBadRequest)
+		return
+	}
+	http.Error(*w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+}
+
 func panicCatcher(w http.ResponseWriter) {
 	if r := recover(); r != nil {
 		log.Printf("%s\n", debug.Stack())

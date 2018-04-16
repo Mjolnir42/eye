@@ -30,14 +30,18 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/asaskevich/govalidator"
 	"github.com/julienschmidt/httprouter"
+	"github.com/mjolnir42/erebos"
+	"github.com/mjolnir42/eye/internal/eye"
+	mock "github.com/mjolnir42/eye/internal/eye.mock"
+	rest "github.com/mjolnir42/eye/internal/eye.rest"
 )
 
 // global variables
@@ -59,19 +63,19 @@ func main() {
 		version()
 	}
 
-	log.Printf("Starting runtime config initialization, Eye v%s", somaVersion)
+	logrus.Printf("Starting runtime config initialization, Eye v%s", somaVersion)
 	/*
 	 * Read configuration file
 	 */
 	if configFile, err = filepath.Abs(configFlag); err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 	if configFile, err = filepath.EvalSymlinks(configFile); err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 	err = Eye.readConfigFile(configFile)
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 
 	/*
@@ -82,17 +86,17 @@ func main() {
 	if Eye.Daemon.TLS {
 		Eye.Daemon.url.Scheme = "https"
 		if ok, ptype := govalidator.IsFilePath(Eye.Daemon.Cert); !ok {
-			log.Fatal("Missing required certificate configuration config/daemon/cert-file")
+			logrus.Fatal("Missing required certificate configuration config/daemon/cert-file")
 		} else {
 			if ptype != govalidator.Unix {
-				log.Fatal("config/daemon/cert-File: valid Windows paths are not helpful")
+				logrus.Fatal("config/daemon/cert-File: valid Windows paths are not helpful")
 			}
 		}
 		if ok, ptype := govalidator.IsFilePath(Eye.Daemon.Key); !ok {
-			log.Fatal("Missing required key configuration config/daemon/key-file")
+			logrus.Fatal("Missing required key configuration config/daemon/key-file")
 		} else {
 			if ptype != govalidator.Unix {
-				log.Fatal("config/daemon/key-file: valid Windows paths are not helpful")
+				logrus.Fatal("config/daemon/key-file: valid Windows paths are not helpful")
 			}
 		}
 	} else {
@@ -118,11 +122,26 @@ func main() {
 	defer Eye.run.updateItem.Close()
 	go pingDatabase()
 
+	// v2 STARTUP
+	hm := eye.HandlerMap{}
+	lm := eye.LogHandleMap{}
+
+	appLog := logrus.New()
+	reqLog := logrus.New()
+	errLog := logrus.New()
+	auditLog := logrus.New()
+
+	app := eye.New(&hm, &lm, Eye.run.conn, &erebos.Config{}, appLog,
+		reqLog, errLog, auditLog)
+	app.Start()
+
+	rst := rest.New(mock.AlwaysAuthorize, &hm, &erebos.Config{})
+	go rst.Run()
+
 	/*
 	 * Register http handlers
 	 */
 	router := httprouter.New()
-	router.GET("/api/v1/configuration/:lookup", RetrieveConfigurationItems)
 	router.GET("/api/v1/item/", ListConfigurationItems)
 	router.POST("/api/v1/item/", AddConfigurationItem)
 	router.GET("/api/v1/item/:item", GetConfigurationItem)
@@ -132,13 +151,13 @@ func main() {
 	router.POST("/api/v1/notify", FetchConfigurationItems)
 
 	if Eye.Daemon.TLS {
-		log.Fatal(http.ListenAndServeTLS(
+		logrus.Fatal(http.ListenAndServeTLS(
 			Eye.Daemon.url.Host,
 			Eye.Daemon.Cert,
 			Eye.Daemon.Key,
 			router))
 	} else {
-		log.Fatal(http.ListenAndServe(Eye.Daemon.url.Host, router))
+		logrus.Fatal(http.ListenAndServe(Eye.Daemon.url.Host, router))
 	}
 }
 

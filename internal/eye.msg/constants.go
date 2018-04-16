@@ -16,27 +16,32 @@ const (
 
 // Section Supervisor handles AAA requests outside the permission model
 const (
-	SectionSupervisor  = `supervisor`
-	ActionAuthenticate = `authenticate`
-	TaskBasicAuth      = `basic-auth`
-	VerdictOK          = 200
+	SectionSupervisor   = `supervisor`
+	TaskBasicAuth       = `basic-auth`
+	VerdictOK           = 200
+	VerdictUnauthorized = 401
 )
 
-// Sections in category configuration are for action with configurations
-// as scope
+// Sections in category global are unscoped sections
 const (
-	CategoryConfiguration = `configuration`
-	SectionConfiguration  = `configuration`
+	CategoryGlobal = `global`
+	SectionLookup  = `lookup`
 )
 
 // Actions for the various permission sections
 const (
-	ActionLookup = `lookup`
+	ActionAuthenticate  = `authenticate`
+	ActionAuthorize     = `authorize`
+	ActionConfiguration = `configuration`
 )
 
 // Result codes
 const (
-	ResultOK = 200
+	ResultOK             = 200
+	ResultUnauthorized   = 401
+	ResultNotFound       = 404
+	ResultServerError    = 500
+	ResultNotImplemented = 501
 )
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

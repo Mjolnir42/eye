@@ -26,7 +26,7 @@ func sendMsgResult(w *http.ResponseWriter, r *msg.Result) {
 	)
 
 	switch r.Section {
-	case msg.SectionConfiguration:
+	case msg.SectionLookup:
 		result = proto.NewConfigurationResult()
 		*result.Configurations = append(*result.Configurations, r.Configuration...)
 

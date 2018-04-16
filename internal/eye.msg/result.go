@@ -9,6 +9,8 @@
 package msg // import "github.com/mjolnir42/eye/internal/eye.msg"
 
 import (
+	"fmt"
+
 	proto "github.com/mjolnir42/eye/lib/eye.proto"
 	uuid "github.com/satori/go.uuid"
 )
@@ -23,14 +25,78 @@ type Result struct {
 	Super   Supervisor
 
 	Configuration []proto.Configuration
+
+	fixated bool
 }
 
-// FromRequest ...
+// FromRequest returns a Result configured to match Request rq
 func FromRequest(rq *Request) Result {
 	return Result{
 		ID:      rq.ID,
 		Section: rq.Section,
 		Action:  rq.Action,
+	}
+}
+
+// UnknownRequest is a wrapper function for NotImplemented using a
+// default error based on Request q
+func (r *Result) UnknownRequest(q *Request) {
+	r.NotImplemented(fmt.Errorf(
+		"Unknown requested action: %s/%s",
+		q.Section,
+		q.Action,
+	))
+}
+
+// OK configures the result to reflect that the request was processed
+// fully and without error
+func (r *Result) OK() {
+	r.shrinkwrap(ResultOK, nil)
+}
+
+// NotFound configures the result to reflect that the request target was
+// not found
+func (r *Result) NotFound(err error) {
+	r.shrinkwrap(ResultNotFound, err)
+}
+
+// ServerError configures the result to reflect an occurred server error
+func (r *Result) ServerError(err error) {
+	r.shrinkwrap(ResultServerError, err)
+}
+
+// NotImplemented configures the result to reflect that a codepath was
+// requested that is not implemented
+func (r *Result) NotImplemented(err error) {
+	r.shrinkwrap(ResultNotImplemented, err)
+}
+
+// shrinkwrap finalizes the Result r
+func (r *Result) shrinkwrap(code uint16, err error) {
+	if r.fixated {
+		assertIsNil(fmt.Errorf("msg: double-shrinkwrap of result for RequestID %s",
+			r.ID.String(),
+		))
+	}
+	r.Code = code
+	r.setError(err)
+	r.clear()
+	r.fixated = true
+}
+
+// setError sets r.Error to err, unless err is nil in which case r.Error
+// is preserved as is
+func (r *Result) setError(err error) {
+	if err != nil {
+		r.Error = err
+	}
+}
+
+// clear wipes the result from potential partial results
+func (r *Result) clear() {
+	switch r.Section {
+	case SectionLookup:
+		r.Configuration = []proto.Configuration{}
 	}
 }
 

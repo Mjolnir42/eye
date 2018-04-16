@@ -24,6 +24,7 @@ type Request struct {
 	AuthUser   string
 	Super      Supervisor
 	Reply      chan Result
+	LookupHash string
 }
 
 // New returns a Request

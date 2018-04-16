@@ -6,6 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
+// Package eye implements the application logic of the eye server
 package eye // import "github.com/mjolnir42/eye/internal/eye"
 
 import (

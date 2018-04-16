@@ -10,26 +10,34 @@ package rest // import "github.com/mjolnir42/eye/internal/eye.rest"
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
 )
 
-// ConfigurationLookup function
-func (x *Rest) ConfigurationLookup(w http.ResponseWriter, r *http.Request,
+// LookupConfiguration function
+func (x *Rest) LookupConfiguration(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
 
 	request := msg.New(r, params)
-	request.Section = msg.SectionConfiguration
-	request.Action = msg.ActionLookup
+	request.Section = msg.SectionLookup
+	request.Action = msg.ActionConfiguration
+	request.LookupHash = strings.ToLower(params.ByName(`hash`))
 
 	if !x.isAuthorized(&request) {
 		dispatchForbidden(&w, nil)
 		return
 	}
 
-	handler := x.handlerMap.Get(`configuration_r`)
+	// lookup is to be performed via SHA2/256 hash
+	if len(request.LookupHash) != 64 {
+		dispatchBadRequest(&w, `Invalid SHA2-256 lookup hash format`)
+		return
+	}
+
+	handler := x.handlerMap.Get(`lookup_r`)
 	handler.Intake() <- request
 	result := <-request.Reply
 	sendMsgResult(&w, &result)

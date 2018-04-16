@@ -11,6 +11,8 @@ package stmt // import "github.com/mjolnir42/eye/internal/eye.stmt"
 
 var m = make(map[string]string)
 
+// Name translates between an SQL statement and its descrptive name
+// that can be used during error logging.
 func Name(statement string) string {
 	return m[statement]
 }

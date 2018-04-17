@@ -55,4 +55,21 @@ func calculateLookupID(id uint64, metric string) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
+// getServiceAttributeValue returns the value of the requested service
+// attribute or the empty string otherwise
+func getServiceAttributeValue(details *somaproto.Deployment, attribute string) string {
+	if details.Service == nil {
+		return ``
+	}
+	if len(details.Service.Attributes) == 0 {
+		return ``
+	}
+	for _, attr := range details.Service.Attributes {
+		if attr.Name == attribute {
+			return attr.Value
+		}
+	}
+	return ``
+}
+
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

@@ -8,7 +8,7 @@
 
 package stmt // import "github.com/mjolnir42/eye/internal/eye.stmt"
 
-// LookupStatements contains the SQL statements related to the
+// RegistryStatements contains the SQL statements related to the
 // registration of applications with Eye
 const (
 	RegistryStatements = ``

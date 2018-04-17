@@ -15,8 +15,8 @@ const (
 
 	LookupSearch = `
 SELECT configuration
-FROM   eye.configuration_items
-WHERE  lookup_id = $1::varchar;`
+FROM   eye.configurations
+WHERE  lookupID = $1::varchar;`
 )
 
 func init() {

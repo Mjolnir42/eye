@@ -6,7 +6,6 @@
  * that can be found in the LICENSE file.
  */
 
-// Package proto implements the protocol datastructures for eye
 package proto // import "github.com/mjolnir42/eye/lib/eye.proto"
 
 // Numeric result status codes

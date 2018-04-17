@@ -21,6 +21,7 @@ func (e *Eye) Start() {
 	e.handlerMap.Run(`supervisor`)
 
 	// start regular handlers
+	e.handlerMap.Add(`configuration_r`, newConfigurationRead(e.conf.Eye.QueueLen))
 	e.handlerMap.Add(`deployment_w`, newDeploymentWrite(e.conf.Eye.QueueLen))
 	e.handlerMap.Add(`lookup_r`, newLookupRead(e.conf.Eye.QueueLen))
 

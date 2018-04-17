@@ -45,23 +45,10 @@ func abortOnError(err error) {
 	}
 }
 
-// 200
-func dispatchJSONOK(w *http.ResponseWriter, jsonb *[]byte) {
-	(*w).Header().Set("Content-Type", "application/json")
-	(*w).WriteHeader(http.StatusOK)
-	(*w).Write(*jsonb)
-}
-
 // 204
 func dispatchNoContent(w *http.ResponseWriter) {
 	(*w).WriteHeader(http.StatusNoContent)
 	(*w).Write(nil)
-}
-
-// 400
-func dispatchBadRequest(w *http.ResponseWriter, err string) {
-	http.Error(*w, err, http.StatusBadRequest)
-	log.Println(err)
 }
 
 // 404
@@ -70,30 +57,9 @@ func dispatchNotFound(w *http.ResponseWriter) {
 	log.Println("No items found")
 }
 
-// 410
-func dispatchGone(w *http.ResponseWriter, err string) {
-	http.Error(*w, err, http.StatusGone)
-	log.Println(err)
-}
-
 // 412
 func dispatchPrecondition(w *http.ResponseWriter, err string) {
 	http.Error(*w, err, http.StatusPreconditionFailed)
-	log.Println(err)
-}
-
-// 422
-func dispatchUnprocessable(w *http.ResponseWriter, err string) {
-	http.Error(*w, err, 422)
-	log.Println(err)
-}
-
-// 500
-func dispatchInternalServerError(w *http.ResponseWriter, err string) {
-	http.Error(*w, err, http.StatusInternalServerError)
-	if Eye.Volatile {
-		log.Fatal(err)
-	}
 	log.Println(err)
 }
 

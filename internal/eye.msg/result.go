@@ -24,7 +24,9 @@ type Result struct {
 	Error   error
 	Super   Supervisor
 
-	Configuration []proto.Configuration
+	FeedbackURL       string
+	ConfigurationTask string
+	Configuration     []proto.Configuration
 
 	fixated bool
 }
@@ -32,9 +34,11 @@ type Result struct {
 // FromRequest returns a Result configured to match Request rq
 func FromRequest(rq *Request) Result {
 	return Result{
-		ID:      rq.ID,
-		Section: rq.Section,
-		Action:  rq.Action,
+		ID:                rq.ID,
+		Section:           rq.Section,
+		Action:            rq.Action,
+		FeedbackURL:       rq.FeedbackURL,
+		ConfigurationTask: rq.ConfigurationTask,
 	}
 }
 
@@ -71,6 +75,16 @@ func (r *Result) NotImplemented(err error) {
 	r.shrinkwrap(ResultNotImplemented, err)
 }
 
+// HasFailed returns true if the Result r is for a request that has
+// failed. If the result code has not been set, the result is considered
+// failed as well.
+func (r *Result) HasFailed() bool {
+	if r.Code == 0 || r.Code > 299 {
+		return true
+	}
+	return false
+}
+
 // shrinkwrap finalizes the Result r
 func (r *Result) shrinkwrap(code uint16, err error) {
 	if r.fixated {
@@ -97,6 +111,7 @@ func (r *Result) clear() {
 	switch r.Section {
 	case SectionLookup:
 		r.Configuration = []proto.Configuration{}
+	case SectionDeployment:
 	}
 }
 

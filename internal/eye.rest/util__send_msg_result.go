@@ -20,28 +20,64 @@ import (
 // fail input validation and got processes by the application.
 func sendMsgResult(w *http.ResponseWriter, r *msg.Result) {
 	var (
-		bjson  []byte
-		err    error
-		result proto.Result
+		bjson                []byte
+		err                  error
+		feedback, clearAlarm bool
+		feedbackType         string
 	)
+	result := proto.NewConfigurationResult()
 
+	// internal result contains an error, copy over into protocol result
+	if r.Error != nil {
+		*result.Errors = append(*result.Errors, r.Error.Error())
+		feedbackType = `failed`
+	}
+
+	// copy internal result data into protocol result
 	switch r.Section {
 	case msg.SectionLookup:
-		result = proto.NewConfigurationResult()
 		*result.Configurations = append(*result.Configurations, r.Configuration...)
+
+	case msg.SectionDeployment:
+		// only errors return with r.Section == msg.SectionDeployment
+		*result.Configurations = nil
+		feedback = true
+		feedbackType = `failed`
+
+	case msg.SectionConfiguration:
+		switch r.ConfigurationTask {
+		// configuration action originated from a push notification deployment
+		case msg.TaskDelete:
+			clearAlarm = true
+			fallthrough
+		case msg.TaskRollout, msg.TaskPending, msg.TaskDeprovision:
+			feedback = true
+		}
 
 	default:
 		dispatchInternalError(w, nil)
 		return
 	}
 
+	// set protocol result status
 	switch r.Code {
 	case msg.ResultOK:
-		result.OK()
+		result.SetStatus(r.Code)
+		feedbackType = `success`
+	case msg.ResultServerError, msg.ResultNotImplemented:
+		result.SetStatus(r.Code)
 
 	default:
 		dispatchInternalError(w, nil)
 		return
+	}
+
+	if feedback {
+		go sendSomaFeedback(r.FeedbackURL, feedbackType)
+	}
+
+	if clearAlarm && !r.HasFailed() && r.Action == msg.ActionRemove {
+		go clearCamsAlarm(r)
 	}
 
 	if bjson, err = json.Marshal(&result); err != nil {

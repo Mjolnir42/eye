@@ -146,8 +146,6 @@ func main() {
 	router.GET("/api/v1/item/:item", GetConfigurationItem)
 	router.PUT("/api/v1/item/:item", UpdateConfigurationItem)
 	router.DELETE("/api/v1/item/:item", DeleteConfigurationItem)
-	router.POST("/api/v1/notify/", FetchConfigurationItems)
-	router.POST("/api/v1/notify", FetchConfigurationItems)
 
 	if Eye.Daemon.TLS {
 		logrus.Fatal(http.ListenAndServeTLS(

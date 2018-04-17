@@ -10,8 +10,10 @@ package proto // import "github.com/mjolnir42/eye/lib/eye.proto"
 
 // Numeric result status codes
 const (
-	StatusOK      = 200
-	StatusPartial = 206
+	StatusOK             = 200
+	StatusPartial        = 206
+	StatusServerError    = 500
+	StatusNotImplemented = 501
 )
 
 // DisplayStatus holds the string representation of the various status
@@ -19,6 +21,8 @@ const (
 var DisplayStatus = map[int]string{
 	200: "OK",
 	206: "Partial result",
+	500: "Server error",
+	501: "Not implemented",
 }
 
 // Result ...
@@ -27,6 +31,20 @@ type Result struct {
 	StatusText     string           `json:"statusText"`
 	Errors         *[]string        `json:"errors,omitempty"`
 	Configurations *[]Configuration `json:"configurations,omitempty"`
+}
+
+// SetStatus sets the status code
+func (r *Result) SetStatus(code uint16) {
+	switch code {
+	case StatusOK:
+		r.OK()
+	case StatusPartial:
+		r.Partial()
+	case StatusServerError:
+		r.ServerError()
+	case StatusNotImplemented:
+		r.NotImplemented()
+	}
 }
 
 // OK updates the status fields to indicate a partial result if the
@@ -44,6 +62,18 @@ func (r *Result) OK() {
 func (r *Result) Partial() {
 	r.StatusCode = StatusPartial
 	r.StatusText = DisplayStatus[StatusPartial]
+}
+
+// ServerError ... 500
+func (r *Result) ServerError() {
+	r.StatusCode = StatusServerError
+	r.StatusText = DisplayStatus[StatusServerError]
+}
+
+// NotImplemented ... 501
+func (r *Result) NotImplemented() {
+	r.StatusCode = StatusNotImplemented
+	r.StatusText = DisplayStatus[StatusNotImplemented]
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

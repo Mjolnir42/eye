@@ -24,21 +24,33 @@ const (
 
 // Sections in category global are unscoped sections
 const (
-	CategoryGlobal = `global`
-	SectionLookup  = `lookup`
+	CategoryGlobal       = `global`
+	SectionConfiguration = `configuration`
+	SectionDeployment    = `deployment`
+	SectionLookup        = `lookup`
+	TaskDelete           = `delete`
+	TaskDeprovision      = `deprovision`
+	TaskPending          = `pending`
+	TaskRollout          = `rollout`
 )
 
 // Actions for the various permission sections
 const (
+	ActionAdd           = `add`
 	ActionAuthenticate  = `authenticate`
 	ActionAuthorize     = `authorize`
 	ActionConfiguration = `configuration`
+	ActionNop           = `nop`
+	ActionNotification  = `notification`
+	ActionRemove        = `remove`
+	ActionUpdate        = `update`
 )
 
 // Result codes
 const (
 	ResultOK             = 200
 	ResultUnauthorized   = 401
+	ResultForbidden      = 403
 	ResultNotFound       = 404
 	ResultServerError    = 500
 	ResultNotImplemented = 501

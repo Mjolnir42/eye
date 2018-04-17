@@ -12,19 +12,28 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	proto "github.com/mjolnir42/eye/lib/eye.proto"
 	uuid "github.com/satori/go.uuid"
 )
 
 // Request represents the internal request metadata
 type Request struct {
-	ID         uuid.UUID
-	Section    string
-	Action     string
-	RemoteAddr string
-	AuthUser   string
-	Super      Supervisor
-	Reply      chan Result
-	LookupHash string
+	ID           uuid.UUID
+	Section      string
+	Action       string
+	RemoteAddr   string
+	AuthUser     string
+	Super        Supervisor
+	Reply        chan Result
+	LookupHash   string
+	FeedbackURL  string
+	Notification struct {
+		ID         uuid.UUID
+		PathPrefix string
+	}
+
+	ConfigurationTask string
+	Configuration     proto.Configuration
 }
 
 // New returns a Request

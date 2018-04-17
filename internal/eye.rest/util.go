@@ -19,8 +19,11 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/asaskevich/govalidator"
+	"github.com/go-resty/resty"
+	msg "github.com/mjolnir42/eye/internal/eye.msg"
 	"github.com/mjolnir42/eye/lib/eye.proto"
 	somaproto "github.com/mjolnir42/soma/lib/proto"
 )
@@ -45,6 +48,19 @@ func decodeJSONBody(r *http.Request, s interface{}) (err error) {
 		err = fmt.Errorf("decodeJSONBody: unhandled request type: %s", reflect.TypeOf(s))
 	}
 	return
+}
+
+// sendSomaFeedback sends rollout feedback to SOMA
+func sendSomaFeedback(addr, status string) {
+	soma := fmt.Sprintf(addr, status)
+	client := resty.New().SetTimeout(750 * time.Millisecond)
+	client.R().Patch(soma)
+}
+
+// clearCamsAlarm sends a clear Alarm to CAMS for every Configuration
+// in res.Configuration
+func clearCamsAlarm(res *msg.Result) {
+	// XXX TODO
 }
 
 // processDeploymentDetails creates an eye protocol configuration from

@@ -16,6 +16,9 @@ import (
 	"github.com/mjolnir42/erebos"
 )
 
+// handlerLookup is used by eye handlers to communicate with each other
+var handlerLookup *HandlerMap
+
 // Eye application struct
 type Eye struct {
 	handlerMap   *HandlerMap
@@ -45,6 +48,7 @@ func New(
 	e.reqLog = reqLog
 	e.errLog = errLog
 	e.auditLog = auditLog
+	handlerLookup = appHandlerMap
 	return &e
 }
 

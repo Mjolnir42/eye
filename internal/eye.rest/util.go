@@ -16,7 +16,7 @@ import (
 	"reflect"
 	"runtime/debug"
 
-	"github.com/mjolnir42/soma/lib/proto"
+	somaproto "github.com/mjolnir42/soma/lib/proto"
 )
 
 func panicCatcher(w http.ResponseWriter) {
@@ -32,8 +32,8 @@ func decodeJSONBody(r *http.Request, s interface{}) (err error) {
 	decoder := json.NewDecoder(r.Body)
 
 	switch s.(type) {
-	case *proto.PushNotification:
-		c := s.(*proto.PushNotification)
+	case *somaproto.PushNotification:
+		c := s.(*somaproto.PushNotification)
 		err = decoder.Decode(c)
 	default:
 		err = fmt.Errorf("decodeJSONBody: unhandled request type: %s", reflect.TypeOf(s))

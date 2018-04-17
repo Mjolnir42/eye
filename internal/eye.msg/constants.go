@@ -40,9 +40,11 @@ const (
 	ActionAuthenticate  = `authenticate`
 	ActionAuthorize     = `authorize`
 	ActionConfiguration = `configuration`
+	ActionList          = `list`
 	ActionNop           = `nop`
 	ActionNotification  = `notification`
 	ActionRemove        = `remove`
+	ActionShow          = `show`
 	ActionUpdate        = `update`
 )
 

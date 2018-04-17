@@ -39,15 +39,6 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func CalculateLookupID(id uint64, metric string) string {
-	asset := strconv.FormatUint(id, 10)
-	hash := sha256.New()
-	hash.Write([]byte(asset))
-	hash.Write([]byte(metric))
-
-	return hex.EncodeToString(hash.Sum(nil))
-}
-
 func Itemize(details *proto.Deployment) (string, *ConfigurationItem, error) {
 	var (
 		fqdn, dnsZone string

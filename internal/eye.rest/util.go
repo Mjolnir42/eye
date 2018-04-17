@@ -9,12 +9,15 @@
 package rest // import "github.com/mjolnir42/eye/internal/eye.rest"
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"reflect"
 	"runtime/debug"
+	"strconv"
 
 	somaproto "github.com/mjolnir42/soma/lib/proto"
 )
@@ -39,6 +42,17 @@ func decodeJSONBody(r *http.Request, s interface{}) (err error) {
 		err = fmt.Errorf("decodeJSONBody: unhandled request type: %s", reflect.TypeOf(s))
 	}
 	return
+}
+
+// calculateLookupID returns the lookupID hash for a given (id,metric)
+// tuple
+func calculateLookupID(id uint64, metric string) string {
+	asset := strconv.FormatUint(id, 10)
+	hash := sha256.New()
+	hash.Write([]byte(asset))
+	hash.Write([]byte(metric))
+
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

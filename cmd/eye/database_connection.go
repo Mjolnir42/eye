@@ -77,14 +77,6 @@ func prepareStatements() {
 	log.Println("Preparing: delete_lookup")
 	abortOnError(err)
 
-	Eye.run.getConfig, err = Eye.run.conn.Prepare(stmtGetSingleConfiguration)
-	log.Println("Preparing: get_config")
-	abortOnError(err)
-
-	Eye.run.getItems, err = Eye.run.conn.Prepare(stmtGetConfigurationItemIds)
-	log.Println("Preparing: get_items")
-	abortOnError(err)
-
 	Eye.run.getLookup, err = Eye.run.conn.Prepare(stmtGetLookupIDForItem)
 	log.Println("Preparing: get_lookup")
 	abortOnError(err)

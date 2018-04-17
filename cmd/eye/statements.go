@@ -62,13 +62,4 @@ const stmtDeleteLookupID = `
 DELETE FROM eye.configuration_lookup
 WHERE       lookup_id = $1::varchar;`
 
-const stmtGetConfigurationItemIds = `
-SELECT configuration_item_id
-FROM   eye.configuration_items;`
-
-const stmtGetSingleConfiguration = `
-SELECT configuration
-FROM   eye.configuration_items
-WHERE  configuration_item_id = $1::uuid;`
-
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

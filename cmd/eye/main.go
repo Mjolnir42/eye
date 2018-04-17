@@ -112,8 +112,6 @@ func main() {
 	defer Eye.run.checkLookup.Close()
 	defer Eye.run.deleteItem.Close()
 	defer Eye.run.deleteLookup.Close()
-	defer Eye.run.getConfig.Close()
-	defer Eye.run.getItems.Close()
 	defer Eye.run.getLookup.Close()
 	defer Eye.run.insertItem.Close()
 	defer Eye.run.insertLookup.Close()

@@ -6,11 +6,6 @@
 
 package main
 
-const stmtCheckItemExists = `
-SELECT configuration_item_id
-FROM   eye.configuration_items
-WHERE  configuration_item_id = $1::uuid;`
-
 const stmtCheckLookupExists = `
 SELECT lookup_id
 FROM   eye.configuration_lookup

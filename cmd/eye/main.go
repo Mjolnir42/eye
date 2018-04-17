@@ -109,7 +109,6 @@ func main() {
 	connectToDatabase()
 	prepareStatements()
 	// Close() must be deferred here since it triggers on function exit
-	defer Eye.run.checkItem.Close()
 	defer Eye.run.checkLookup.Close()
 	defer Eye.run.deleteItem.Close()
 	defer Eye.run.deleteLookup.Close()

@@ -65,10 +65,6 @@ func pingDatabase() {
 func prepareStatements() {
 	var err error
 
-	Eye.run.checkItem, err = Eye.run.conn.Prepare(stmtCheckItemExists)
-	log.Println("Preparing: check_item")
-	abortOnError(err)
-
 	Eye.run.checkLookup, err = Eye.run.conn.Prepare(stmtCheckLookupExists)
 	log.Println("Preparing: check_lookup")
 	abortOnError(err)

@@ -109,14 +109,8 @@ func main() {
 	connectToDatabase()
 	prepareStatements()
 	// Close() must be deferred here since it triggers on function exit
-	defer Eye.run.checkLookup.Close()
-	defer Eye.run.deleteItem.Close()
-	defer Eye.run.deleteLookup.Close()
 	defer Eye.run.getLookup.Close()
-	defer Eye.run.insertItem.Close()
-	defer Eye.run.insertLookup.Close()
 	defer Eye.run.itemCount.Close()
-	defer Eye.run.updateItem.Close()
 	go pingDatabase()
 
 	// v2 STARTUP
@@ -139,7 +133,6 @@ func main() {
 	 * Register http handlers
 	 */
 	router := httprouter.New()
-	router.POST("/api/v1/item/", AddConfigurationItem)
 	router.PUT("/api/v1/item/:item", UpdateConfigurationItem)
 	router.DELETE("/api/v1/item/:item", DeleteConfigurationItem)
 

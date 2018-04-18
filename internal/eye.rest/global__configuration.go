@@ -15,6 +15,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
+	proto "github.com/mjolnir42/eye/lib/eye.proto"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -60,6 +61,37 @@ func (x *Rest) ConfigurationList(w http.ResponseWriter, r *http.Request,
 	}
 
 	handler := x.handlerMap.Get(`configuration_r`)
+	handler.Intake() <- request
+	result := <-request.Reply
+	sendMsgResult(&w, &result)
+}
+
+// ConfigurationAdd accepts requests to add a configuration
+func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
+	params httprouter.Params) {
+	defer panicCatcher(w)
+
+	request := msg.New(r, params)
+	request.Section = msg.SectionConfiguration
+	request.Action = msg.ActionAdd
+
+	cReq := proto.NewConfigurationRequest()
+	if err := decodeJSONBody(r, &cReq); err != nil {
+		dispatchBadRequest(&w, err.Error())
+		return
+	}
+	request.Configuration = *cReq.Configuration
+	request.LookupHash = calculateLookupID(
+		request.Configuration.HostID,
+		request.Configuration.Metric,
+	)
+
+	if !x.isAuthorized(&request) {
+		dispatchForbidden(&w, nil)
+		return
+	}
+
+	handler := x.handlerMap.Get(`configuration_w`)
 	handler.Intake() <- request
 	result := <-request.Reply
 	sendMsgResult(&w, &result)

@@ -9,19 +9,4 @@
 
 package stmt // import "github.com/mjolnir42/eye/internal/eye.stmt"
 
-// DeploymentStatements contains the SQL statements related to
-// configuration deployment
-const (
-	DeploymentStatements = ``
-
-	ConfigurationExists = `
-SELECT configurationID
-FROM   eye.configurations
-WHERE  configurationID = $1::uuid;`
-)
-
-func init() {
-	m[ConfigurationExists] = `ConfigurationExists`
-}
-
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

@@ -65,36 +65,12 @@ func pingDatabase() {
 func prepareStatements() {
 	var err error
 
-	Eye.run.checkLookup, err = Eye.run.conn.Prepare(stmtCheckLookupExists)
-	log.Println("Preparing: check_lookup")
-	abortOnError(err)
-
-	Eye.run.deleteItem, err = Eye.run.conn.Prepare(stmtDeleteConfigurationItem)
-	log.Println("Preparing: delete_item")
-	abortOnError(err)
-
-	Eye.run.deleteLookup, err = Eye.run.conn.Prepare(stmtDeleteLookupID)
-	log.Println("Preparing: delete_lookup")
-	abortOnError(err)
-
 	Eye.run.getLookup, err = Eye.run.conn.Prepare(stmtGetLookupIDForItem)
 	log.Println("Preparing: get_lookup")
 	abortOnError(err)
 
-	Eye.run.insertItem, err = Eye.run.conn.Prepare(stmtInsertConfigurationItem)
-	log.Println("Preparing: insert_item")
-	abortOnError(err)
-
-	Eye.run.insertLookup, err = Eye.run.conn.Prepare(stmtInsertLookupInformation)
-	log.Println("Preparing: insert_lookup")
-	abortOnError(err)
-
 	Eye.run.itemCount, err = Eye.run.conn.Prepare(stmtGetItemCountForLookupID)
 	log.Println("Preparing: item_count")
-	abortOnError(err)
-
-	Eye.run.updateItem, err = Eye.run.conn.Prepare(stmtUpdateConfigurationItem)
-	log.Println("Preparing: update_item")
 	abortOnError(err)
 }
 

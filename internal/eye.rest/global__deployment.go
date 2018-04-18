@@ -21,7 +21,6 @@ import (
 	"github.com/go-resty/resty"
 	"github.com/julienschmidt/httprouter"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	"github.com/mjolnir42/eye/lib/eye.proto"
 	somaproto "github.com/mjolnir42/soma/lib/proto"
 	uuid "github.com/satori/go.uuid"
 )
@@ -74,6 +73,42 @@ func (x *Rest) DeploymentNotification(w http.ResponseWriter, r *http.Request,
 	x.fetchPushDeployment(&w, &request)
 }
 
+// DeploymentProcess accepts SOMA deployment results
+func (x *Rest) DeploymentProcess(w http.ResponseWriter, r *http.Request,
+	params httprouter.Params) {
+	defer panicCatcher(w)
+
+	request := msg.New(r, params)
+	request.Section = msg.SectionDeployment
+	request.Action = msg.ActionProcess
+
+	var err error
+	cReq := somaproto.NewDeploymentResult()
+	if err = decodeJSONBody(r, &cReq); err != nil {
+		dispatchInternalError(&w, err)
+		return
+	}
+	if len(*cReq.Deployments) != 1 {
+		dispatchUnprocessableEntity(&w, fmt.Errorf("Deployment count %d != 1", len(*cReq.Deployments)))
+		return
+	}
+	request.ConfigurationTask = (*cReq.Deployments)[0].Task
+	if request.LookupHash, request.Configuration, err = processDeploymentDetails(&(*cReq.Deployments)[0]); err != nil {
+		dispatchInternalError(&w, err)
+		return
+	}
+
+	if !x.isAuthorized(&request) {
+		dispatchForbidden(&w, nil)
+		return
+	}
+
+	handler := x.handlerMap.Get(`deployment_w`)
+	handler.Intake() <- request
+	result := <-request.Reply
+	sendMsgResult(&w, &result)
+}
+
 // fetchPushDeployment fetches DeploymentDetails for which a push
 // notification was received by x.DeploymentNotification
 func (x *Rest) fetchPushDeployment(w *http.ResponseWriter, q *msg.Request) {
@@ -81,7 +116,6 @@ func (x *Rest) fetchPushDeployment(w *http.ResponseWriter, q *msg.Request) {
 		client *resty.Client
 		resp   *resty.Response
 		res    somaproto.Result
-		config *proto.Configuration
 		err    error
 	)
 
@@ -135,12 +169,11 @@ func (x *Rest) fetchPushDeployment(w *http.ResponseWriter, q *msg.Request) {
 	}
 
 	q.ConfigurationTask = (*res.Deployments)[0].Task
-	if q.LookupHash, config, err = processDeploymentDetails(&(*res.Deployments)[0]); err != nil {
+	if q.LookupHash, q.Configuration, err = processDeploymentDetails(&(*res.Deployments)[0]); err != nil {
 		dispatchInternalError(w, err)
 		go sendSomaFeedback(q.FeedbackURL, `failed`)
 		return
 	}
-	q.Configuration = *config
 
 	if !x.isAuthorized(q) {
 		dispatchForbidden(w, nil)

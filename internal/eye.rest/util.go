@@ -65,10 +65,10 @@ func clearCamsAlarm(res *msg.Result) {
 
 // processDeploymentDetails creates an eye protocol configuration from
 // SOMA deployment details
-func processDeploymentDetails(details *somaproto.Deployment) (string, *proto.Configuration, error) {
+func processDeploymentDetails(details *somaproto.Deployment) (string, proto.Configuration, error) {
 	lookupID := calculateLookupID(details.Node.AssetID, details.Metric.Path)
 
-	config := &proto.Configuration{
+	config := proto.Configuration{
 		ID:       details.CheckInstance.InstanceID,
 		Metric:   details.Metric.Path,
 		Interval: details.CheckConfig.Interval,
@@ -90,7 +90,7 @@ func processDeploymentDetails(details *somaproto.Deployment) (string, *proto.Con
 		`disk.usage.percent`:
 		mountpoint := getServiceAttributeValue(details, `filesystem`)
 		if mountpoint == `` {
-			return ``, nil, fmt.Errorf("Disk metric %s is missing filesystem service attribute", config.Metric)
+			return ``, proto.Configuration{}, fmt.Errorf("Disk metric %s is missing filesystem service attribute", config.Metric)
 		}
 
 		// update metric path and recalculate updated lookupID
@@ -124,7 +124,7 @@ func processDeploymentDetails(details *somaproto.Deployment) (string, *proto.Con
 
 	govalidator.SetFieldsRequiredByDefault(true)
 	if ok, err := govalidator.ValidateStruct(config); !ok {
-		return ``, nil, err
+		return ``, proto.Configuration{}, err
 	}
 	return lookupID, config, nil
 }

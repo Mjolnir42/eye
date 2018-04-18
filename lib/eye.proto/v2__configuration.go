@@ -37,7 +37,15 @@ type Threshold struct {
 	Value     int64  `json:"value"`
 }
 
-// NewConfigurationResult ...
+// NewConfigurationRequest returns a new request
+func NewConfigurationRequest() Request {
+	return Request{
+		Flags:         &Flags{},
+		Configuration: &Configuration{},
+	}
+}
+
+// NewConfigurationResult returns a new result
 func NewConfigurationResult() Result {
 	return Result{
 		Errors:         &[]string{},

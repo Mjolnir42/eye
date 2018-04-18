@@ -41,8 +41,13 @@ func sendMsgResult(w *http.ResponseWriter, r *msg.Result) {
 	case msg.SectionDeployment:
 		// only errors return with r.Section == msg.SectionDeployment
 		*result.Configurations = nil
-		feedback = true
 		feedbackType = `failed`
+
+		// msg.ActionProcess does not require sending rollout feedback
+		switch r.Action {
+		case msg.ActionNotification:
+			feedback = true
+		}
 
 	case msg.SectionConfiguration:
 		// configuration action originated from a push notification deployment

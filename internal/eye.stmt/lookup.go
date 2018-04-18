@@ -17,9 +17,35 @@ const (
 SELECT configuration
 FROM   eye.configurations
 WHERE  lookupID = $1::varchar;`
+
+	LookupExists = `
+SELECT lookupID
+FROM   eye.lookup
+WHERE  lookupID = $1::varchar;`
+
+	LookupAdd = `
+INSERT INTO eye.lookup (
+            lookupID,
+            hostID,
+            metric)
+SELECT $1::varchar,
+       $2::numeric,
+       $3::text
+WHERE  NOT EXISTS (
+       SELECT lookupID
+       FROM   eye.lookup
+       WHERE  lookupID = $1::varchar
+          OR  ( hostID = $2::numeric AND metric = $3::text));`
+
+	LookupRemove = `
+DELETE FROM eye.lookup
+WHERE       lookupID = $1::varchar;`
 )
 
 func init() {
+	m[LookupAdd] = `LookupAdd`
+	m[LookupExists] = `LookupExists`
+	m[LookupRemove] = `LookupRemove`
 	m[LookupSearch] = `LookupSearch`
 }
 

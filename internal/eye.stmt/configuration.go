@@ -21,11 +21,43 @@ FROM   eye.configurations;`
 SELECT configuration
 FROM   eye.configurations
 WHERE  configurationID = $1::uuid;`
+
+	ConfigurationExists = `
+SELECT configurationID
+FROM   eye.configurations
+WHERE  configurationID = $1::uuid;`
+
+	ConfigurationAdd = `
+INSERT INTO eye.configurations (
+            configurationID,
+            lookupID,
+            configuration)
+SELECT $1::uuid,
+       $2::varchar,
+       $3::jsonb
+WHERE  NOT EXISTS (
+       SELECT configurationID
+       FROM   eye.configurations
+       WHERE  configurationID = $1::uuid);`
+
+	ConfigurationRemove = `
+DELETE FROM eye.configurations
+WHERE       configurationID = $1::uuid;`
+
+	ConfigurationUpdate = `
+UPDATE eye.configurations
+SET    lookupID = $2::varchar,
+       configuration = $3::jsonb
+WHERE  configurationID = $1::uuid;`
 )
 
 func init() {
+	m[ConfigurationAdd] = `ConfigurationAdd`
+	m[ConfigurationExists] = `ConfigurationExists`
 	m[ConfigurationList] = `ConfigurationList`
+	m[ConfigurationRemove] = `ConfigurationRemove`
 	m[ConfigurationShow] = `ConfigurationShow`
+	m[ConfigurationUpdate] = `ConfigurationUpdate`
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

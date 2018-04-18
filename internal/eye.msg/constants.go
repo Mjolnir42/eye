@@ -43,6 +43,7 @@ const (
 	ActionList          = `list`
 	ActionNop           = `nop`
 	ActionNotification  = `notification`
+	ActionProcess       = `process`
 	ActionRemove        = `remove`
 	ActionShow          = `show`
 	ActionUpdate        = `update`

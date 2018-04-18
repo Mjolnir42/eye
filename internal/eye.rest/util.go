@@ -69,9 +69,9 @@ func processDeploymentDetails(details *somaproto.Deployment) (string, *proto.Con
 	lookupID := calculateLookupID(details.Node.AssetID, details.Metric.Path)
 
 	config := &proto.Configuration{
-		ConfigurationID: details.CheckInstance.InstanceID,
-		Metric:          details.Metric.Path,
-		Interval:        details.CheckConfig.Interval,
+		ID:       details.CheckInstance.InstanceID,
+		Metric:   details.Metric.Path,
+		Interval: details.CheckConfig.Interval,
 		//HostID:   strconv.FormatUint(details.Node.AssetID, 10),
 		HostID: details.Node.AssetID,
 		Metadata: proto.MetaData{

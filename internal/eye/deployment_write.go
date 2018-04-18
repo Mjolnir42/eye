@@ -60,7 +60,7 @@ func (w *DeploymentWrite) notification(q *msg.Request, mr *msg.Result) {
 	)
 
 	if err = w.stmtConfigExists.QueryRow(
-		q.Configuration.ConfigurationID,
+		q.Configuration.ID,
 	).Scan(
 		&configurationID,
 	); err != nil {
@@ -100,10 +100,10 @@ func (w *DeploymentWrite) notification(q *msg.Request, mr *msg.Result) {
 		}
 	}
 
-	if q.Configuration.ConfigurationID != configurationID {
+	if q.Configuration.ID != configurationID {
 		panic(fmt.Sprintf(
 			"Database corrupt! Lookup for %s found %s",
-			q.Configuration.ConfigurationID,
+			q.Configuration.ID,
 			configurationID,
 		))
 	}

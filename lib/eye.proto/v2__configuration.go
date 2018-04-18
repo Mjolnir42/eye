@@ -11,14 +11,14 @@ package proto // import "github.com/mjolnir42/eye/lib/eye.proto"
 // Configuration holds the monitoring profile definition for a check
 // that has to be performed
 type Configuration struct {
-	ConfigurationID string      `json:"configurationID" valid:"uuidv4"`
-	Metric          string      `json:"metric"`
-	HostID          uint64      `json:"hostID,string"`
-	Tags            []string    `json:"tags,omitempty"`
-	Oncall          string      `json:"oncall"`
-	Interval        uint64      `json:"interval"`
-	Metadata        MetaData    `json:"metadata"`
-	Thresholds      []Threshold `json:"thresholds"`
+	ID         string      `json:"configurationID" valid:"uuidv4"`
+	Metric     string      `json:"metric"`
+	HostID     uint64      `json:"hostID,string"`
+	Tags       []string    `json:"tags,omitempty"`
+	Oncall     string      `json:"oncall"`
+	Interval   uint64      `json:"interval"`
+	Metadata   MetaData    `json:"metadata"`
+	Thresholds []Threshold `json:"thresholds"`
 }
 
 // MetaData contains the metadata for a Configuration

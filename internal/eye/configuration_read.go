@@ -11,9 +11,11 @@ package eye // import "github.com/mjolnir42/eye/internal/eye"
 
 import (
 	"database/sql"
+	"encoding/json"
 
 	"github.com/Sirupsen/logrus"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
+	proto "github.com/mjolnir42/eye/lib/eye.proto"
 )
 
 // ConfigurationRead handles read requests for hash lookups
@@ -41,10 +43,39 @@ func (r *ConfigurationRead) process(q *msg.Request) {
 	result := msg.FromRequest(q)
 
 	switch q.Action {
+	case msg.ActionShow:
+		r.show(q, &result)
 	default:
 		result.UnknownRequest(q)
 	}
 	q.Reply <- result
+}
+
+// show returns a specific configuration
+func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
+	var (
+		err           error
+		confResult    string
+		configuration proto.Configuration
+	)
+
+	if err = r.stmtShow.QueryRow(
+		q.Configuration.ID,
+	).Scan(
+		&confResult,
+	); err == sql.ErrNoRows {
+		mr.NotFound(err)
+		return
+	} else if err != nil {
+		mr.ServerError(err)
+		return
+	}
+	if err = json.Unmarshal([]byte(confResult), &configuration); err != nil {
+		mr.ServerError(err)
+		return
+	}
+	mr.Configuration = append(mr.Configuration, configuration)
+	mr.OK()
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

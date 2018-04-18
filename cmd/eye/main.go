@@ -141,7 +141,6 @@ func main() {
 	router := httprouter.New()
 	router.GET("/api/v1/item/", ListConfigurationItems)
 	router.POST("/api/v1/item/", AddConfigurationItem)
-	router.GET("/api/v1/item/:item", GetConfigurationItem)
 	router.PUT("/api/v1/item/:item", UpdateConfigurationItem)
 	router.DELETE("/api/v1/item/:item", DeleteConfigurationItem)
 

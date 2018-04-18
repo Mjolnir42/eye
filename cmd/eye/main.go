@@ -133,7 +133,6 @@ func main() {
 	 * Register http handlers
 	 */
 	router := httprouter.New()
-	router.PUT("/api/v1/item/:item", UpdateConfigurationItem)
 	router.DELETE("/api/v1/item/:item", DeleteConfigurationItem)
 
 	if Eye.Daemon.TLS {

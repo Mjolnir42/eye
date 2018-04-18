@@ -98,6 +98,17 @@ func (x *Rest) DeploymentProcess(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
+	// called via v1 update API PUT:/api/v1/item/:ID
+	if r.Method == `PUT` {
+		if request.Configuration.ID != params.ByName(`ID`) {
+			dispatchBadRequest(&w, fmt.Sprintf(
+				"Mismatched IDs in update: [%s] vs [%s]",
+				request.Configuration.ID,
+				params.ByName(`ID`),
+			))
+		}
+	}
+
 	if !x.isAuthorized(&request) {
 		dispatchForbidden(&w, nil)
 		return

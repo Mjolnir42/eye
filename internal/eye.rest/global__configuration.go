@@ -10,6 +10,7 @@
 package rest // import "github.com/mjolnir42/eye/internal/eye.rest"
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -86,6 +87,44 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 		request.Configuration.Metric,
 	)
 
+	if !x.isAuthorized(&request) {
+		dispatchForbidden(&w, nil)
+		return
+	}
+
+	handler := x.handlerMap.Get(`configuration_w`)
+	handler.Intake() <- request
+	result := <-request.Reply
+	sendMsgResult(&w, &result)
+}
+
+// ConfigurationUpdate accepts requests to update a configuration
+func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
+	params httprouter.Params) {
+	defer panicCatcher(w)
+
+	request := msg.New(r, params)
+	request.Section = msg.SectionConfiguration
+	request.Action = msg.ActionUpdate
+
+	cReq := proto.NewConfigurationRequest()
+	if err := decodeJSONBody(r, &cReq); err != nil {
+		dispatchBadRequest(&w, err.Error())
+		return
+	}
+	request.Configuration = *cReq.Configuration
+	request.LookupHash = calculateLookupID(
+		request.Configuration.HostID,
+		request.Configuration.Metric,
+	)
+
+	if request.Configuration.ID != params.ByName(`ID`) {
+		dispatchBadRequest(&w, fmt.Sprintf(
+			"Mismatched IDs in update: [%s] vs [%s]",
+			request.Configuration.ID,
+			params.ByName(`ID`),
+		))
+	}
 	if !x.isAuthorized(&request) {
 		dispatchForbidden(&w, nil)
 		return

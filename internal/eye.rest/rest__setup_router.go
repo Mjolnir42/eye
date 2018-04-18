@@ -26,6 +26,8 @@ func (x *Rest) setupRouter() *httprouter.Router {
 	router.POST(`/api/v2/configuration/`, x.Verify(x.ConfigurationAdd))
 	router.POST(`/api/v2/deployment/`, x.Verify(x.DeploymentProcess))
 	router.POST(`/api/v2/deployment/notification`, x.Verify(x.DeploymentNotification))
+	router.PUT(`/api/v1/item/:ID`, x.Verify(x.DeploymentProcess))
+	router.PUT(`/api/v2/configuration/:ID`, x.Verify(x.ConfigurationUpdate))
 
 	return router
 }

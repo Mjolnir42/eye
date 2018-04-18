@@ -47,6 +47,8 @@ func (w *ConfigurationWrite) process(q *msg.Request) {
 	switch q.Action {
 	case msg.ActionAdd:
 		w.add(q, &result)
+	case msg.ActionUpdate:
+		w.update(q, &result)
 	default:
 		result.UnknownRequest(q)
 	}
@@ -101,6 +103,48 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 	// statement should affect 1 row
 	if count, _ := res.RowsAffected(); count != 1 {
 		mr.ServerError(fmt.Errorf("Insert statement affected %d rows", count))
+		tx.Rollback()
+		return
+	}
+
+	if err = tx.Commit(); err != nil {
+		mr.ServerError(err)
+		return
+	}
+	mr.OK()
+}
+
+// update replaces a configuration
+func (w *ConfigurationWrite) update(q *msg.Request, mr *msg.Result) {
+	var (
+		err   error
+		tx    *sql.Tx
+		jsonb []byte
+		res   sql.Result
+	)
+
+	if jsonb, err = json.Marshal(q.Configuration); err != nil {
+		mr.ServerError(err)
+		return
+	}
+
+	if tx, err = w.conn.Begin(); err != nil {
+		mr.ServerError(err)
+		return
+	}
+
+	if res, err = tx.Stmt(w.stmtConfigurationUpdate).Exec(
+		q.Configuration.ID,
+		q.LookupHash,
+		jsonb,
+	); err != nil {
+		mr.ServerError(err)
+		tx.Rollback()
+		return
+	}
+	// statement should affect 1 row
+	if count, _ := res.RowsAffected(); count != 1 {
+		mr.ServerError(fmt.Errorf("Rollback: update statement affected %d rows", count))
 		tx.Rollback()
 		return
 	}

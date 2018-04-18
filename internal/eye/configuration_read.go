@@ -43,12 +43,44 @@ func (r *ConfigurationRead) process(q *msg.Request) {
 	result := msg.FromRequest(q)
 
 	switch q.Action {
+	case msg.ActionList:
+		r.list(q, &result)
 	case msg.ActionShow:
 		r.show(q, &result)
 	default:
 		result.UnknownRequest(q)
 	}
 	q.Reply <- result
+}
+
+// list returns all configurations by ID
+func (r *ConfigurationRead) list(q *msg.Request, mr *msg.Result) {
+	var (
+		configurationID string
+		rows            *sql.Rows
+		err             error
+	)
+
+	if rows, err = r.stmtList.Query(); err != nil {
+		mr.ServerError(err)
+		return
+	}
+
+	for rows.Next() {
+		if err = rows.Scan(&configurationID); err != nil {
+			rows.Close()
+			mr.ServerError(err)
+			return
+		}
+		mr.Configuration = append(mr.Configuration, proto.Configuration{
+			ID: configurationID,
+		})
+	}
+	if err = rows.Err(); err != nil {
+		mr.ServerError(err)
+		return
+	}
+	mr.OK()
 }
 
 // show returns a specific configuration

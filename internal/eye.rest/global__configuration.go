@@ -45,4 +45,24 @@ func (x *Rest) ConfigurationShow(w http.ResponseWriter, r *http.Request,
 	sendMsgResult(&w, &result)
 }
 
+// ConfigurationList accepts requests to list all configurations
+func (x *Rest) ConfigurationList(w http.ResponseWriter, r *http.Request,
+	params httprouter.Params) {
+	defer panicCatcher(w)
+
+	request := msg.New(r, params)
+	request.Section = msg.SectionConfiguration
+	request.Action = msg.ActionList
+
+	if !x.isAuthorized(&request) {
+		dispatchForbidden(&w, nil)
+		return
+	}
+
+	handler := x.handlerMap.Get(`configuration_r`)
+	handler.Intake() <- request
+	result := <-request.Reply
+	sendMsgResult(&w, &result)
+}
+
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

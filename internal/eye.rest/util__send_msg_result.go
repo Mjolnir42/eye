@@ -45,14 +45,15 @@ func sendMsgResult(w *http.ResponseWriter, r *msg.Result) {
 		feedbackType = `failed`
 
 	case msg.SectionConfiguration:
-		switch r.ConfigurationTask {
 		// configuration action originated from a push notification deployment
+		switch r.ConfigurationTask {
 		case msg.TaskDelete:
 			clearAlarm = true
 			fallthrough
 		case msg.TaskRollout, msg.TaskPending, msg.TaskDeprovision:
 			feedback = true
 		}
+		*result.Configurations = append(*result.Configurations, r.Configuration...)
 
 	default:
 		dispatchInternalError(w, nil)
@@ -66,6 +67,7 @@ func sendMsgResult(w *http.ResponseWriter, r *msg.Result) {
 		feedbackType = `success`
 	case msg.ResultServerError, msg.ResultNotImplemented:
 		result.SetStatus(r.Code)
+		result.Configurations = &[]proto.Configuration{}
 
 	default:
 		dispatchInternalError(w, nil)

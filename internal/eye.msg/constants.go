@@ -52,11 +52,17 @@ const (
 // Result codes
 const (
 	ResultOK             = 200
+	ResultNoContent      = 204
+	ResultBadRequest     = 400
 	ResultUnauthorized   = 401
 	ResultForbidden      = 403
 	ResultNotFound       = 404
+	ResultGone           = 410
+	ResultUnprocessable  = 422
 	ResultServerError    = 500
 	ResultNotImplemented = 501
+	ResultBadGateway     = 502
+	ResultGatewayTimeout = 504
 )
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

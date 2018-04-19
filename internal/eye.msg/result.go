@@ -10,6 +10,7 @@ package msg // import "github.com/mjolnir42/eye/internal/eye.msg"
 
 import (
 	"fmt"
+	"net/http"
 
 	proto "github.com/mjolnir42/eye/lib/eye.proto"
 	uuid "github.com/satori/go.uuid"
@@ -23,6 +24,8 @@ type Result struct {
 	Code    uint16
 	Error   error
 	Super   Supervisor
+
+	Flags Flags
 
 	FeedbackURL       string
 	ConfigurationTask string
@@ -39,6 +42,7 @@ func FromRequest(rq *Request) Result {
 		Action:            rq.Action,
 		FeedbackURL:       rq.FeedbackURL,
 		ConfigurationTask: rq.ConfigurationTask,
+		Flags:             rq.Flags,
 	}
 }
 
@@ -58,10 +62,40 @@ func (r *Result) OK() {
 	r.shrinkwrap(ResultOK, nil)
 }
 
+// NoContent configures the result to reflect that the request was
+// processed fully and the reply has been intentionally been left blank
+func (r *Result) NoContent() {
+	r.shrinkwrap(ResultNoContent, nil)
+}
+
+// BadRequest configures the result to reflect that the received request
+// was just awful
+func (r *Result) BadRequest(err error) {
+	r.shrinkwrap(ResultBadRequest, err)
+}
+
+// Forbidden configures result to reflect that the attempted request was
+// not authorized
+func (r *Result) Forbidden(err error) {
+	r.shrinkwrap(ResultForbidden, err)
+}
+
 // NotFound configures the result to reflect that the request target was
 // not found
 func (r *Result) NotFound(err error) {
 	r.shrinkwrap(ResultNotFound, err)
+}
+
+// Gone configures the result to reflect that the request target is
+// no longer valid / available
+func (r *Result) Gone(err error) {
+	r.shrinkwrap(ResultGone, err)
+}
+
+// UnprocessableEntity configures the result to reflect that the request
+// was unprocessable
+func (r *Result) UnprocessableEntity(err error) {
+	r.shrinkwrap(ResultUnprocessable, err)
 }
 
 // ServerError configures the result to reflect an occurred server error
@@ -73,6 +107,18 @@ func (r *Result) ServerError(err error) {
 // requested that is not implemented
 func (r *Result) NotImplemented(err error) {
 	r.shrinkwrap(ResultNotImplemented, err)
+}
+
+// BadGateway configures the result to reflect that an indicated
+// upstream origin gateway is invalid
+func (r *Result) BadGateway(err error) {
+	r.shrinkwrap(ResultBadGateway, err)
+}
+
+// GatewayTimeout configures the result to indicate that a timeout on
+// an upstream gateway was encountered
+func (r *Result) GatewayTimeout(err error) {
+	r.shrinkwrap(ResultGatewayTimeout, err)
 }
 
 // HasFailed returns true if the Result r is for a request that has
@@ -93,6 +139,9 @@ func (r *Result) shrinkwrap(code uint16, err error) {
 		))
 	}
 	r.Code = code
+	if r.Code >= 400 && err == nil {
+		err = fmt.Errorf(http.StatusText(int(code)))
+	}
 	r.setError(err)
 	r.clear()
 	r.fixated = true

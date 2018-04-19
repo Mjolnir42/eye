@@ -9,6 +9,7 @@
 package rest // import "github.com/mjolnir42/eye/internal/eye.rest"
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -27,20 +28,22 @@ func (x *Rest) LookupConfiguration(w http.ResponseWriter, r *http.Request,
 	request.LookupHash = strings.ToLower(params.ByName(`hash`))
 
 	if !x.isAuthorized(&request) {
-		dispatchForbidden(&w, nil)
+		replyForbidden(&w, &request, nil)
 		return
 	}
 
 	// lookup is to be performed via SHA2/256 hash
 	if len(request.LookupHash) != 64 {
-		dispatchBadRequest(&w, `Invalid SHA2-256 lookup hash format`)
+		replyBadRequest(&w, &request, fmt.Errorf(
+			`Invalid SHA2-256 lookup hash format`,
+		))
 		return
 	}
 
 	handler := x.handlerMap.Get(`lookup_r`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	sendMsgResult(&w, &result)
+	respond(&w, &result)
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

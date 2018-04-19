@@ -32,8 +32,18 @@ type Request struct {
 		PathPrefix string
 	}
 
+	Flags Flags
+
 	ConfigurationTask string
 	Configuration     proto.Configuration
+}
+
+// Flags represents the fully resolved proto.Request flags as they
+// should be applied to this request
+type Flags struct {
+	AlarmClearing          bool
+	CacheInvalidation      bool
+	SendDeploymentFeedback bool
 }
 
 // New returns a Request

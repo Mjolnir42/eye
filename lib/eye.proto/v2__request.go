@@ -16,9 +16,9 @@ type Request struct {
 
 // Flags contains the flags that a v2 API request can contain
 type Flags struct {
-	AlarmClearing          bool `json:"alarm.clearing"`
-	CacheInvalidation      bool `json:"enable.cache.invalidation"`
-	SendDeploymentFeedback bool `json:"send.deployment.feedback"`
+	AlarmClearing          string `json:"alarm.clearing"`
+	CacheInvalidation      string `json:"enable.cache.invalidation"`
+	SendDeploymentFeedback string `json:"send.deployment.feedback"`
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

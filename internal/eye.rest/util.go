@@ -24,7 +24,7 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/go-resty/resty"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	"github.com/mjolnir42/eye/lib/eye.proto"
+	proto "github.com/mjolnir42/eye/lib/eye.proto"
 	somaproto "github.com/mjolnir42/soma/lib/proto"
 )
 
@@ -52,7 +52,7 @@ func decodeJSONBody(r *http.Request, s interface{}) (err error) {
 
 // sendSomaFeedback sends rollout feedback to SOMA
 func sendSomaFeedback(addr, status string) {
-	soma := fmt.Sprintf(addr, status)
+	soma := strings.Replace(addr, `{STATUS}`, status, -1)
 	client := resty.New().SetTimeout(750 * time.Millisecond)
 	client.R().Patch(soma)
 }
@@ -191,6 +191,58 @@ func getTargetHost(details *somaproto.Deployment) string {
 	default:
 		return details.Node.Name
 	}
+}
+
+// resolveFlags sets the request flags of rqInternal based on the user
+// input in rqProtocol as well as the request type
+func resolveFlags(rqProtocol *proto.Request, rqInternal *msg.Request) error {
+	switch rqInternal.Section {
+	case msg.SectionConfiguration:
+		switch rqInternal.Action {
+		case msg.ActionAdd, msg.ActionUpdate, msg.ActionRemove:
+			rqInternal.Flags.AlarmClearing = false
+
+			if val, err := strconv.ParseBool(rqProtocol.Flags.CacheInvalidation); err != nil {
+				// enable by default
+				rqInternal.Flags.CacheInvalidation = true
+			} else if !val {
+				// explicit disable
+				rqInternal.Flags.CacheInvalidation = false
+			} else {
+				rqInternal.Flags.CacheInvalidation = true
+			}
+
+			if val, err := strconv.ParseBool(rqProtocol.Flags.SendDeploymentFeedback); err != nil {
+				// disable by default
+				rqInternal.Flags.SendDeploymentFeedback = false
+			} else if val {
+				// explicit enable
+				rqInternal.Flags.SendDeploymentFeedback = true
+			} else {
+				rqInternal.Flags.SendDeploymentFeedback = false
+			}
+		}
+
+	case msg.SectionDeployment:
+		switch rqInternal.ConfigurationTask {
+		case msg.TaskRollout:
+			rqInternal.Flags.AlarmClearing = false
+			rqInternal.Flags.CacheInvalidation = true
+			rqInternal.Flags.SendDeploymentFeedback = true
+		case msg.TaskDeprovision:
+			rqInternal.Flags.AlarmClearing = false
+			rqInternal.Flags.CacheInvalidation = false
+			rqInternal.Flags.SendDeploymentFeedback = true
+		case msg.TaskDelete:
+			rqInternal.Flags.AlarmClearing = true
+			rqInternal.Flags.CacheInvalidation = true
+			rqInternal.Flags.SendDeploymentFeedback = true
+		}
+	}
+	if rqInternal.Flags.AlarmClearing && !rqInternal.Flags.CacheInvalidation {
+		return fmt.Errorf(`Invalid flag combination: alarm.clearing requires cache.invalidation`)
+	}
+	return nil
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

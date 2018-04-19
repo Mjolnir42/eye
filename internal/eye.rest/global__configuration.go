@@ -32,19 +32,19 @@ func (x *Rest) ConfigurationShow(w http.ResponseWriter, r *http.Request,
 	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
 
 	if !x.isAuthorized(&request) {
-		dispatchForbidden(&w, nil)
+		replyForbidden(&w, &request, nil)
 		return
 	}
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
-		dispatchBadRequest(&w, err.Error())
+		replyBadRequest(&w, &request, err)
 		return
 	}
 
 	handler := x.handlerMap.Get(`configuration_r`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	sendMsgResult(&w, &result)
+	respond(&w, &result)
 }
 
 // ConfigurationList accepts requests to list all configurations
@@ -57,14 +57,14 @@ func (x *Rest) ConfigurationList(w http.ResponseWriter, r *http.Request,
 	request.Action = msg.ActionList
 
 	if !x.isAuthorized(&request) {
-		dispatchForbidden(&w, nil)
+		replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`configuration_r`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	sendMsgResult(&w, &result)
+	respond(&w, &result)
 }
 
 // ConfigurationAdd accepts requests to add a configuration
@@ -78,7 +78,7 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 
 	cReq := proto.NewConfigurationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
-		dispatchBadRequest(&w, err.Error())
+		replyBadRequest(&w, &request, err)
 		return
 	}
 	request.Configuration = *cReq.Configuration
@@ -87,15 +87,20 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 		request.Configuration.Metric,
 	)
 
+	if err := resolveFlags(&cReq, &request); err != nil {
+		replyBadRequest(&w, &request, err)
+		return
+	}
+
 	if !x.isAuthorized(&request) {
-		dispatchForbidden(&w, nil)
+		replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`configuration_w`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	sendMsgResult(&w, &result)
+	respond(&w, &result)
 }
 
 // ConfigurationUpdate accepts requests to update a configuration
@@ -109,7 +114,7 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 
 	cReq := proto.NewConfigurationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
-		dispatchBadRequest(&w, err.Error())
+		replyBadRequest(&w, &request, err)
 		return
 	}
 	request.Configuration = *cReq.Configuration
@@ -119,21 +124,27 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	)
 
 	if request.Configuration.ID != params.ByName(`ID`) {
-		dispatchBadRequest(&w, fmt.Sprintf(
+		replyBadRequest(&w, &request, fmt.Errorf(
 			"Mismatched IDs in update: [%s] vs [%s]",
 			request.Configuration.ID,
 			params.ByName(`ID`),
 		))
 	}
+
+	if err := resolveFlags(&cReq, &request); err != nil {
+		replyBadRequest(&w, &request, err)
+		return
+	}
+
 	if !x.isAuthorized(&request) {
-		dispatchForbidden(&w, nil)
+		replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`configuration_w`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	sendMsgResult(&w, &result)
+	respond(&w, &result)
 }
 
 // ConfigurationRemove accepts requests to remove a configuration
@@ -146,15 +157,27 @@ func (x *Rest) ConfigurationRemove(w http.ResponseWriter, r *http.Request,
 	request.Action = msg.ActionRemove
 	request.Configuration.ID = params.ByName(`ID`)
 
+	// request body may contain request flag overrides
+	cReq := proto.NewConfigurationRequest()
+	if err := decodeJSONBody(r, &cReq); err != nil {
+		replyBadRequest(&w, &request, err)
+		return
+	}
+
+	if err := resolveFlags(&cReq, &request); err != nil {
+		replyBadRequest(&w, &request, err)
+		return
+	}
+
 	if !x.isAuthorized(&request) {
-		dispatchForbidden(&w, nil)
+		replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`configuration_w`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	sendMsgResult(&w, &result)
+	respond(&w, &result)
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

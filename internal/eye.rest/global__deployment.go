@@ -106,6 +106,7 @@ func (x *Rest) DeploymentProcess(w http.ResponseWriter, r *http.Request,
 				request.Configuration.ID,
 				params.ByName(`ID`),
 			))
+			return
 		}
 	}
 

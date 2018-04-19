@@ -54,9 +54,19 @@ WHERE  configurationID = $1::uuid;`
 SELECT COUNT(1)::integer
 FROM   eye.configurations
 WHERE  lookupID = $1::varchar;`
+
+	ConfigurationActivate = `
+INSERT INTO eye.activations (
+            configurationID)
+SELECT $1::uuid
+WHERE  NOT EXISTS (
+       SELECT configurationID
+       FROM   eye.activations
+       WHERE  configurationID = $1::uuid;`
 )
 
 func init() {
+	m[ConfigurationActivate] = `ConfigurationActivate`
 	m[ConfigurationAdd] = `ConfigurationAdd`
 	m[ConfigurationCountForLookupID] = `ConfigurationCountForLookupID`
 	m[ConfigurationExists] = `ConfigurationExists`

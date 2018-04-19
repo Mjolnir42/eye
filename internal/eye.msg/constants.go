@@ -36,6 +36,7 @@ const (
 
 // Actions for the various permission sections
 const (
+	ActionActivate      = `activate`
 	ActionAdd           = `add`
 	ActionAuthenticate  = `authenticate`
 	ActionAuthorize     = `authorize`

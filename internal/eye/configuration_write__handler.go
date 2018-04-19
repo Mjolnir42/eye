@@ -32,6 +32,7 @@ func (w *ConfigurationWrite) Run() {
 	var err error
 
 	for statement, prepStmt := range map[string]*sql.Stmt{
+		stmt.ConfigurationActivate:         w.stmtConfigurationActivate,
 		stmt.ConfigurationAdd:              w.stmtConfigurationAdd,
 		stmt.ConfigurationCountForLookupID: w.stmtConfigurationCountForLookupID,
 		stmt.ConfigurationRemove:           w.stmtConfigurationRemove,

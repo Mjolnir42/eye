@@ -46,6 +46,23 @@ func FromRequest(rq *Request) Result {
 	}
 }
 
+// RowCnt takes the return value from sql.Result.RowsAffected and
+// sets the r to status OK if it was 0 or 1 row and ServerError else
+func (r *Result) RowCnt(i int64, err error) bool {
+	if err != nil {
+		r.ServerError(err)
+		return false
+	}
+	switch i {
+	case 0, 1:
+		r.OK()
+		return true
+	default:
+		r.ServerError(fmt.Errorf("Invalid number of rows affected: %d", i))
+		return false
+	}
+}
+
 // UnknownRequest is a wrapper function for NotImplemented using a
 // default error based on Request q
 func (r *Result) UnknownRequest(q *Request) {

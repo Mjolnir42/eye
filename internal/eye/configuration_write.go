@@ -24,6 +24,7 @@ type ConfigurationWrite struct {
 	Input                             chan msg.Request
 	Shutdown                          chan struct{}
 	conn                              *sql.DB
+	stmtConfigurationActivate         *sql.Stmt
 	stmtConfigurationAdd              *sql.Stmt
 	stmtConfigurationCountForLookupID *sql.Stmt
 	stmtConfigurationRemove           *sql.Stmt
@@ -56,6 +57,8 @@ func (w *ConfigurationWrite) process(q *msg.Request) {
 		w.remove(q, &result)
 	case msg.ActionUpdate:
 		w.update(q, &result)
+	case msg.ActionActivate:
+		w.activate(q, &result)
 	default:
 		result.UnknownRequest(q)
 	}
@@ -270,6 +273,22 @@ func (w *ConfigurationWrite) update(q *msg.Request, mr *msg.Result) {
 		return
 	}
 	mr.OK()
+}
+
+// activate records a configuration activation
+func (w *ConfigurationWrite) activate(q *msg.Request, mr *msg.Result) {
+	var err error
+	var res sql.Result
+
+	if res, err = w.stmtConfigurationActivate.Exec(
+		q.Configuration.ID,
+	); err != nil {
+		mr.ServerError(err)
+		return
+	}
+	if mr.RowCnt(res.RowsAffected()) {
+		mr.Configuration = append(mr.Configuration, q.Configuration)
+	}
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

@@ -22,6 +22,7 @@ func (x *Rest) setupRouter() *httprouter.Router {
 	router.GET(`/api/v2/configuration/:ID`, x.Verify(x.ConfigurationShow))
 	router.GET(`/api/v2/configuration/`, x.Verify(x.ConfigurationList))
 	router.GET(`/api/v2/lookup/configuration/:hash`, x.Verify(x.LookupConfiguration))
+	router.PATCH(`/api/v2/configuration/:ID/active`, x.Verify(x.ConfigurationActivate))
 	router.POST(`/api/v1/item/`, x.Verify(x.DeploymentProcess))
 	router.POST(`/api/v1/notify/`, x.Verify(x.DeploymentNotification))
 	router.POST(`/api/v1/notify`, x.Verify(x.DeploymentNotification))

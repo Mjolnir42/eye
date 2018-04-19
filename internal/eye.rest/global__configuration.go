@@ -180,4 +180,25 @@ func (x *Rest) ConfigurationRemove(w http.ResponseWriter, r *http.Request,
 	respond(&w, &result)
 }
 
+// ConfigurationActivate accepts requests to activate a configuration
+func (x *Rest) ConfigurationActivate(w http.ResponseWriter, r *http.Request,
+	params httprouter.Params) {
+	defer panicCatcher(w)
+
+	request := msg.New(r, params)
+	request.Section = msg.SectionConfiguration
+	request.Action = msg.ActionActivate
+	request.Configuration.ID = params.ByName(`ID`)
+
+	if !x.isAuthorized(&request) {
+		replyForbidden(&w, &request, nil)
+		return
+	}
+
+	handler := x.handlerMap.Get(`configuration_w`)
+	handler.Intake() <- request
+	result := <-request.Reply
+	respond(&w, &result)
+}
+
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

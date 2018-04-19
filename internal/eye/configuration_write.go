@@ -102,7 +102,7 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 	}
 	// statement should affect 1 row
 	if count, _ := res.RowsAffected(); count != 1 {
-		mr.ServerError(fmt.Errorf("Insert statement affected %d rows", count))
+		mr.ServerError(fmt.Errorf("Rollback: insert statement affected %d rows", count))
 		tx.Rollback()
 		return
 	}

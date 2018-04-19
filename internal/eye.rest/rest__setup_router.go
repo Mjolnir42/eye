@@ -14,6 +14,8 @@ import "github.com/julienschmidt/httprouter"
 func (x *Rest) setupRouter() *httprouter.Router {
 	router := httprouter.New()
 
+	router.DELETE(`/api/v1/item/:ID`, x.Verify(x.ConfigurationRemove))
+	router.DELETE(`/api/v2/configuration/:ID`, x.Verify(x.ConfigurationRemove))
 	router.GET(`/api/v1/configuration/:hash`, x.Verify(x.LookupConfiguration))
 	router.GET(`/api/v1/item/:ID`, x.Verify(x.ConfigurationShow))
 	router.GET(`/api/v1/item/`, x.Verify(x.ConfigurationList))

@@ -131,7 +131,6 @@ func main() {
 	 * Register http handlers
 	 */
 	router := httprouter.New()
-	router.DELETE("/api/v1/item/:item", DeleteConfigurationItem)
 
 	if Eye.Daemon.TLS {
 		logrus.Fatal(http.ListenAndServeTLS(

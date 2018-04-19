@@ -107,8 +107,6 @@ func main() {
 	 * Initialize database
 	 */
 	connectToDatabase()
-	prepareStatements()
-	// Close() must be deferred here since it triggers on function exit
 	go pingDatabase()
 
 	// v2 STARTUP

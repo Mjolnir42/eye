@@ -16,20 +16,25 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
+	proto "github.com/mjolnir42/eye/lib/eye.proto"
 )
 
 // ConfigurationWrite handles read requests for hash lookups
 type ConfigurationWrite struct {
-	Input                   chan msg.Request
-	Shutdown                chan struct{}
-	conn                    *sql.DB
-	stmtConfigurationAdd    *sql.Stmt
-	stmtConfigurationRemove *sql.Stmt
-	stmtConfigurationUpdate *sql.Stmt
-	stmtLookupAdd           *sql.Stmt
-	appLog                  *logrus.Logger
-	reqLog                  *logrus.Logger
-	errLog                  *logrus.Logger
+	Input                             chan msg.Request
+	Shutdown                          chan struct{}
+	conn                              *sql.DB
+	stmtConfigurationAdd              *sql.Stmt
+	stmtConfigurationCountForLookupID *sql.Stmt
+	stmtConfigurationRemove           *sql.Stmt
+	stmtConfigurationShow             *sql.Stmt
+	stmtConfigurationUpdate           *sql.Stmt
+	stmtLookupAdd                     *sql.Stmt
+	stmtLookupIDForConfiguration      *sql.Stmt
+	stmtLookupRemove                  *sql.Stmt
+	appLog                            *logrus.Logger
+	reqLog                            *logrus.Logger
+	errLog                            *logrus.Logger
 }
 
 // newConfigurationWrite return a new ConfigurationWrite handler with input buffer of length
@@ -47,6 +52,8 @@ func (w *ConfigurationWrite) process(q *msg.Request) {
 	switch q.Action {
 	case msg.ActionAdd:
 		w.add(q, &result)
+	case msg.ActionRemove:
+		w.remove(q, &result)
 	case msg.ActionUpdate:
 		w.update(q, &result)
 	default:
@@ -107,6 +114,115 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 		return
 	}
 
+	if err = tx.Commit(); err != nil {
+		mr.ServerError(err)
+		return
+	}
+	mr.OK()
+}
+
+// remove deletes a configuration from the database
+func (w *ConfigurationWrite) remove(q *msg.Request, mr *msg.Result) {
+	var (
+		err                  error
+		tx                   *sql.Tx
+		res                  sql.Result
+		lookupID, confResult string
+		popcnt               int
+		configuration        proto.Configuration
+	)
+
+	// open transaction
+	if tx, err = w.conn.Begin(); err != nil {
+		mr.ServerError(err)
+		return
+	}
+
+	// retrieve lookupID for Configuration.ID prior to deleting it; if
+	// this is the last configuration using this hash then the
+	// lookup is deleted as well
+	if err = tx.Stmt(w.stmtLookupIDForConfiguration).QueryRow(
+		q.Configuration.ID,
+	).Scan(
+		&lookupID,
+	); err == sql.ErrNoRows {
+		// not being able to delete what we do not have is ok
+		goto commitTx
+	} else if err != nil {
+		mr.ServerError(err)
+		tx.Rollback()
+		return
+	}
+
+	// retrieve full configuration prior to deleting it; this is
+	// required for requests with q.ConfigurationTask set to
+	// msg.TaskDelete and enabled AlarmClearing so that the OK event can
+	// be constructed with the correct metadata
+	if err = tx.Stmt(w.stmtConfigurationShow).QueryRow(
+		q.Configuration.ID,
+	).Scan(
+		&confResult,
+	); err != nil {
+		mr.ServerError(err)
+		tx.Rollback()
+		return
+	}
+	if err = json.Unmarshal([]byte(confResult), &configuration); err != nil {
+		mr.ServerError(err)
+		tx.Rollback()
+		return
+	}
+	mr.Configuration = append(mr.Configuration, configuration)
+
+	// delete configuration
+	if res, err = tx.Stmt(w.stmtConfigurationRemove).Exec(
+		q.Configuration.ID,
+	); err != nil {
+		mr.ServerError(err)
+		tx.Rollback()
+		return
+	}
+	// statement should affect 0 or 1 rows
+	if count, _ := res.RowsAffected(); count > 1 || count < 0 {
+		mr.ServerError(fmt.Errorf("Rollback: delete statement affected %d rows", count))
+		tx.Rollback()
+		return
+	}
+
+	// check number of remaining configurations using the same lookupID
+	if err = tx.Stmt(w.stmtConfigurationCountForLookupID).QueryRow(
+		lookupID,
+	).Scan(
+		&popcnt,
+	); err != nil {
+		// SELECT COUNT queries must always return a result row,
+		// so sql.ErrNoRows is fatal
+		mr.ServerError(err)
+		tx.Rollback()
+		return
+	}
+	if popcnt > 0 {
+		// there are still configurations using the the lookupID, skip
+		// deleting lookupID and commit transaction
+		goto commitTx
+	}
+
+	// delete lookupID entry
+	if res, err = tx.Stmt(w.stmtLookupRemove).Exec(
+		lookupID,
+	); err != nil {
+		mr.ServerError(err)
+		tx.Rollback()
+		return
+	}
+	// statement should affect 1 row
+	if count, _ := res.RowsAffected(); count != 1 {
+		mr.ServerError(fmt.Errorf("Rollback: delete statement affected %d rows", count))
+		tx.Rollback()
+		return
+	}
+
+commitTx:
 	if err = tx.Commit(); err != nil {
 		mr.ServerError(err)
 		return

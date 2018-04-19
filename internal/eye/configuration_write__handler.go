@@ -32,10 +32,14 @@ func (w *ConfigurationWrite) Run() {
 	var err error
 
 	for statement, prepStmt := range map[string]*sql.Stmt{
-		stmt.ConfigurationAdd:    w.stmtConfigurationAdd,
-		stmt.ConfigurationRemove: w.stmtConfigurationRemove,
-		stmt.ConfigurationUpdate: w.stmtConfigurationUpdate,
-		stmt.LookupAdd:           w.stmtLookupAdd,
+		stmt.ConfigurationAdd:              w.stmtConfigurationAdd,
+		stmt.ConfigurationCountForLookupID: w.stmtConfigurationCountForLookupID,
+		stmt.ConfigurationRemove:           w.stmtConfigurationRemove,
+		stmt.ConfigurationShow:             w.stmtConfigurationShow,
+		stmt.ConfigurationUpdate:           w.stmtConfigurationUpdate,
+		stmt.LookupAdd:                     w.stmtLookupAdd,
+		stmt.LookupIDForConfiguration:      w.stmtLookupIDForConfiguration,
+		stmt.LookupRemove:                  w.stmtLookupRemove,
 	} {
 		if prepStmt, err = w.conn.Prepare(statement); err != nil {
 			w.errLog.Fatal(`lookup`, err, stmt.Name(statement))

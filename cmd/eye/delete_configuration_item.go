@@ -44,41 +44,7 @@ func DeleteConfigurationItem(w http.ResponseWriter, r *http.Request, params http
 		dispatchBadRequest(&w, err.Error())
 		return
 	}
-	if err = deleteItem(itemID); err != nil {
-		dispatchInternalServerError(&w, err.Error())
-		return
-	}
 	dispatchNoContent(&w)
-}
-
-func deleteItem(itemID string) error {
-	var (
-		lookupID string
-		count    int
-		err      error
-	)
-
-	if err = Eye.run.getLookup.QueryRow(itemID).Scan(&lookupID); err == sql.ErrNoRows {
-		// not being able to delete what we do not have is ok
-		return nil
-	} else if err != nil {
-		// either a real error, or what is to be deleted does not exist
-		return err
-	}
-
-	if _, err = Eye.run.deleteItem.Exec(itemID); err != nil {
-		return err
-	}
-
-	if err = Eye.run.itemCount.QueryRow(lookupID).Scan(&count); err != nil {
-		return err
-	}
-
-	if count != 0 {
-		return nil
-	}
-	_, err = Eye.run.deleteLookup.Exec(lookupID)
-	return err
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

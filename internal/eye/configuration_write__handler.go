@@ -35,6 +35,7 @@ func (w *ConfigurationWrite) Run() {
 		stmt.ConfigurationActivate:         w.stmtConfigurationActivate,
 		stmt.ConfigurationAdd:              w.stmtConfigurationAdd,
 		stmt.ConfigurationCountForLookupID: w.stmtConfigurationCountForLookupID,
+		stmt.ConfigurationProvision:        w.stmtConfigurationProvision,
 		stmt.ConfigurationRemove:           w.stmtConfigurationRemove,
 		stmt.ConfigurationShow:             w.stmtConfigurationShow,
 		stmt.ConfigurationUpdate:           w.stmtConfigurationUpdate,

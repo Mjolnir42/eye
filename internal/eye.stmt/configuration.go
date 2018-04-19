@@ -63,6 +63,15 @@ WHERE  NOT EXISTS (
        SELECT configurationID
        FROM   eye.activations
        WHERE  configurationID = $1::uuid;`
+
+	ConfigurationProvision = `
+INSERT INTO eye.provisions (
+            configurationID)
+SELECT $1::uuid
+WHERE  NOT EXISTS (
+       SELECT configurationID
+       FROM   eye.provisions
+       WHERE  configurationID = $1::uuid;`
 )
 
 func init() {
@@ -71,6 +80,7 @@ func init() {
 	m[ConfigurationCountForLookupID] = `ConfigurationCountForLookupID`
 	m[ConfigurationExists] = `ConfigurationExists`
 	m[ConfigurationList] = `ConfigurationList`
+	m[ConfigurationProvision] = `ConfigurationProvision`
 	m[ConfigurationRemove] = `ConfigurationRemove`
 	m[ConfigurationShow] = `ConfigurationShow`
 	m[ConfigurationUpdate] = `ConfigurationUpdate`

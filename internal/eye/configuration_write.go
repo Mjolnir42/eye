@@ -27,6 +27,7 @@ type ConfigurationWrite struct {
 	stmtConfigurationActivate         *sql.Stmt
 	stmtConfigurationAdd              *sql.Stmt
 	stmtConfigurationCountForLookupID *sql.Stmt
+	stmtConfigurationProvision        *sql.Stmt
 	stmtConfigurationRemove           *sql.Stmt
 	stmtConfigurationShow             *sql.Stmt
 	stmtConfigurationUpdate           *sql.Stmt
@@ -113,6 +114,14 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 	// statement should affect 1 row
 	if count, _ := res.RowsAffected(); count != 1 {
 		mr.ServerError(fmt.Errorf("Rollback: insert statement affected %d rows", count))
+		tx.Rollback()
+		return
+	}
+
+	if _, err = tx.Stmt(w.stmtConfigurationProvision).Exec(
+		q.Configuration.ID,
+	); err != nil {
+		mr.ServerError(err)
 		tx.Rollback()
 		return
 	}

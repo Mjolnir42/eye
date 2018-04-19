@@ -49,10 +49,16 @@ UPDATE eye.configurations
 SET    lookupID = $2::varchar,
        configuration = $3::jsonb
 WHERE  configurationID = $1::uuid;`
+
+	ConfigurationCountForLookupID = `
+SELECT COUNT(1)::integer
+FROM   eye.configurations
+WHERE  lookupID = $1::varchar;`
 )
 
 func init() {
 	m[ConfigurationAdd] = `ConfigurationAdd`
+	m[ConfigurationCountForLookupID] = `ConfigurationCountForLookupID`
 	m[ConfigurationExists] = `ConfigurationExists`
 	m[ConfigurationList] = `ConfigurationList`
 	m[ConfigurationRemove] = `ConfigurationRemove`

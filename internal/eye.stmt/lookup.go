@@ -40,11 +40,17 @@ WHERE  NOT EXISTS (
 	LookupRemove = `
 DELETE FROM eye.lookup
 WHERE       lookupID = $1::varchar;`
+
+	LookupIDForConfiguration = `
+SELECT lookupID
+FROM   eye.configurations
+WHERE  configurationID = $1::uuid;`
 )
 
 func init() {
 	m[LookupAdd] = `LookupAdd`
 	m[LookupExists] = `LookupExists`
+	m[LookupIDForConfiguration] = `LookupIDForConfiguration`
 	m[LookupRemove] = `LookupRemove`
 	m[LookupSearch] = `LookupSearch`
 }

@@ -109,8 +109,6 @@ func main() {
 	connectToDatabase()
 	prepareStatements()
 	// Close() must be deferred here since it triggers on function exit
-	defer Eye.run.getLookup.Close()
-	defer Eye.run.itemCount.Close()
 	go pingDatabase()
 
 	// v2 STARTUP

@@ -64,14 +64,6 @@ func pingDatabase() {
 
 func prepareStatements() {
 	var err error
-
-	Eye.run.getLookup, err = Eye.run.conn.Prepare(stmtGetLookupIDForItem)
-	log.Println("Preparing: get_lookup")
-	abortOnError(err)
-
-	Eye.run.itemCount, err = Eye.run.conn.Prepare(stmtGetItemCountForLookupID)
-	log.Println("Preparing: item_count")
-	abortOnError(err)
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

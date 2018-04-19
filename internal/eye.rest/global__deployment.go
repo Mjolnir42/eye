@@ -98,8 +98,9 @@ func (x *Rest) DeploymentProcess(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
+	switch r.Method {
 	// called via v1 update API PUT:/api/v1/item/:ID
-	if r.Method == `PUT` {
+	case `PUT`:
 		if request.Configuration.ID != params.ByName(`ID`) {
 			dispatchBadRequest(&w, fmt.Sprintf(
 				"Mismatched IDs in update: [%s] vs [%s]",
@@ -107,6 +108,30 @@ func (x *Rest) DeploymentProcess(w http.ResponseWriter, r *http.Request,
 				params.ByName(`ID`),
 			))
 			return
+		}
+
+		// v1 PUT API returned an error if the deployment was not
+		// a rollout
+		if request.ConfigurationTask != msg.TaskRollout {
+			dispatchBadRequest(&w, fmt.Sprintf(
+				"Update for ID %s is not a rollout (%s)",
+				params.ByName(`ID`),
+				request.ConfigurationTask,
+			))
+			return
+		}
+	case `POST`:
+		if r.URL.EscapedPath() == `/api/v1/item/` {
+			// v1 POST API returned an error if the deployment was not
+			// a rollout
+			if request.ConfigurationTask != msg.TaskRollout {
+				dispatchBadRequest(&w, fmt.Sprintf(
+					"Update for ID %s is not a rollout (%s)",
+					params.ByName(`ID`),
+					request.ConfigurationTask,
+				))
+				return
+			}
 		}
 	}
 

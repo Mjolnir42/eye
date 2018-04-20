@@ -12,12 +12,10 @@ package rest // import "github.com/mjolnir42/eye/internal/eye.rest"
 import (
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/mjolnir42/erebos"
 	"github.com/mjolnir42/eye/internal/eye"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
 	metrics "github.com/rcrowley/go-metrics"
-	uuid "github.com/satori/go.uuid"
 )
 
 // ShutdownInProgress indicates a pending service shutdown

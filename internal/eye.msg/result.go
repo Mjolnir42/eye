@@ -179,6 +179,9 @@ func (r *Result) clear() {
 	case SectionLookup:
 		r.Configuration = []proto.Configuration{}
 	case SectionDeployment:
+		r.Configuration = []proto.Configuration{}
+	case SectionConfiguration:
+		r.Configuration = []proto.Configuration{}
 	case SectionRegistration:
 		r.Registration = []proto.Registration{}
 	}

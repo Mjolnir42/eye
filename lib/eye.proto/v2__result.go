@@ -33,6 +33,7 @@ type Result struct {
 	StatusText     string           `json:"statusText"`
 	Errors         *[]string        `json:"errors,omitempty"`
 	Configurations *[]Configuration `json:"configurations,omitempty"`
+	Registrations  *[]Registration  `json:"registrations,omitempty"`
 }
 
 // SetStatus sets the status code

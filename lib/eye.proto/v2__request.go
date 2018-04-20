@@ -12,6 +12,7 @@ package proto // import "github.com/mjolnir42/eye/lib/eye.proto"
 type Request struct {
 	Flags         *Flags         `json:"flags,omitempty"`
 	Configuration *Configuration `json:"configuration,omitempty"`
+	Registration  *Registration  `json:"registration,omitempty"`
 }
 
 // Flags contains the flags that a v2 API request can contain

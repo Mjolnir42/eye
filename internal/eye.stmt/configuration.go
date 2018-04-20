@@ -62,7 +62,7 @@ SELECT $1::uuid
 WHERE  NOT EXISTS (
        SELECT configurationID
        FROM   eye.activations
-       WHERE  configurationID = $1::uuid;`
+       WHERE  configurationID = $1::uuid);`
 
 	ConfigurationProvision = `
 INSERT INTO eye.provisions (
@@ -71,7 +71,7 @@ SELECT $1::uuid
 WHERE  NOT EXISTS (
        SELECT configurationID
        FROM   eye.provisions
-       WHERE  configurationID = $1::uuid;`
+       WHERE  configurationID = $1::uuid);`
 )
 
 func init() {

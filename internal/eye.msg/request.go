@@ -36,6 +36,7 @@ type Request struct {
 
 	ConfigurationTask string
 	Configuration     proto.Configuration
+	Registration      proto.Registration
 }
 
 // Flags represents the fully resolved proto.Request flags as they

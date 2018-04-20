@@ -28,6 +28,7 @@ const (
 	SectionConfiguration = `configuration`
 	SectionDeployment    = `deployment`
 	SectionLookup        = `lookup`
+	SectionRegistration  = `registration`
 	TaskDelete           = `delete`
 	TaskDeprovision      = `deprovision`
 	TaskPending          = `pending`

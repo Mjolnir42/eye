@@ -30,6 +30,7 @@ type Result struct {
 	FeedbackURL       string
 	ConfigurationTask string
 	Configuration     []proto.Configuration
+	Registration      []proto.Registration
 
 	fixated bool
 }
@@ -178,6 +179,8 @@ func (r *Result) clear() {
 	case SectionLookup:
 		r.Configuration = []proto.Configuration{}
 	case SectionDeployment:
+	case SectionRegistration:
+		r.Registration = []proto.Registration{}
 	}
 }
 

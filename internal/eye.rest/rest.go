@@ -67,11 +67,4 @@ func (x *Rest) Run() {
 	}
 }
 
-// requestID extracts the RequestID set by Basic Authentication, making
-// the ID consistent between all logs
-func requestID(params httprouter.Params) (id uuid.UUID) {
-	id, _ = uuid.FromString(params.ByName(`RequestID`))
-	return
-}
-
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

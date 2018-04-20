@@ -16,12 +16,15 @@ func (x *Rest) setupRouter() *httprouter.Router {
 
 	router.DELETE(`/api/v1/item/:ID`, x.Verify(x.ConfigurationRemove))
 	router.DELETE(`/api/v2/configuration/:ID`, x.Verify(x.ConfigurationRemove))
+	router.DELETE(`/api/v2/registration/:ID`, x.Verify(x.RegistrationRemove))
 	router.GET(`/api/v1/configuration/:hash`, x.Verify(x.LookupConfiguration))
 	router.GET(`/api/v1/item/:ID`, x.Verify(x.ConfigurationShow))
 	router.GET(`/api/v1/item/`, x.Verify(x.ConfigurationList))
 	router.GET(`/api/v2/configuration/:ID`, x.Verify(x.ConfigurationShow))
 	router.GET(`/api/v2/configuration/`, x.Verify(x.ConfigurationList))
 	router.GET(`/api/v2/lookup/configuration/:hash`, x.Verify(x.LookupConfiguration))
+	router.GET(`/api/v2/registration/:ID`, x.Verify(x.RegistrationShow))
+	router.GET(`/api/v2/registration/`, x.Verify(x.RegistrationList))
 	router.PATCH(`/api/v2/configuration/:ID/active`, x.Verify(x.ConfigurationActivate))
 	router.POST(`/api/v1/item/`, x.Verify(x.DeploymentProcess))
 	router.POST(`/api/v1/notify/`, x.Verify(x.DeploymentNotification))
@@ -29,8 +32,10 @@ func (x *Rest) setupRouter() *httprouter.Router {
 	router.POST(`/api/v2/configuration/`, x.Verify(x.ConfigurationAdd))
 	router.POST(`/api/v2/deployment/`, x.Verify(x.DeploymentProcess))
 	router.POST(`/api/v2/deployment/notification`, x.Verify(x.DeploymentNotification))
+	router.POST(`/api/v2/registration/`, x.Verify(x.RegistrationAdd))
 	router.PUT(`/api/v1/item/:ID`, x.Verify(x.DeploymentProcess))
 	router.PUT(`/api/v2/configuration/:ID`, x.Verify(x.ConfigurationUpdate))
+	router.PUT(`/api/v2/registration/:ID`, x.Verify(x.RegistrationUpdate))
 
 	return router
 }

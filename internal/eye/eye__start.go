@@ -25,6 +25,7 @@ func (e *Eye) Start() {
 	e.handlerMap.Add(`configuration_w`, newConfigurationWrite(e.conf.Eye.QueueLen))
 	e.handlerMap.Add(`deployment_w`, newDeploymentWrite(e.conf.Eye.QueueLen))
 	e.handlerMap.Add(`lookup_r`, newLookupRead(e.conf.Eye.QueueLen))
+	e.handlerMap.Add(`registration_r`, newRegistrationRead(e.conf.Eye.QueueLen))
 
 	for handler := range e.handlerMap.Range() {
 		switch handler {

@@ -22,7 +22,6 @@ var handlerLookup *HandlerMap
 // Eye application struct
 type Eye struct {
 	handlerMap   *HandlerMap
-	logMap       *LogHandleMap
 	dbConnection *sql.DB
 	conf         *erebos.Config
 	appLog       *logrus.Logger
@@ -34,14 +33,12 @@ type Eye struct {
 // New returns a new SOMA application
 func New(
 	appHandlerMap *HandlerMap,
-	logHandleMap *LogHandleMap,
 	dbConnection *sql.DB,
 	conf *erebos.Config,
 	appLog, reqLog, errLog, auditLog *logrus.Logger,
 ) *Eye {
 	e := Eye{}
 	e.handlerMap = appHandlerMap
-	e.logMap = logHandleMap
 	e.dbConnection = dbConnection
 	e.conf = conf
 	e.appLog = appLog

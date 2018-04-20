@@ -42,4 +42,18 @@ func (l *LogHandleMap) Del(key string) {
 	delete(l.hmap, key)
 }
 
+// Range returns the keys of all registered filehandles
+func (l *LogHandleMap) Range() chan string {
+	l.RLock()
+	resChan := make(chan string, len(l.hmap))
+	go func(out chan string) {
+		for name := range l.hmap {
+			out <- name
+		}
+		close(out)
+		l.RUnlock()
+	}(resChan)
+	return resChan
+}
+
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

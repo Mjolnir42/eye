@@ -13,7 +13,7 @@ package stmt // import "github.com/mjolnir42/eye/internal/eye.stmt"
 const (
 	RegistryStatements = ``
 
-	RegistryAdd = `
+	RegistryCreateTable = `
 CREATE TABLE IF NOT EXISTS eye.registry (
   registrationID          uuid            PRIMARY KEY,
   application             varchar(128)    NOT NULL,
@@ -23,6 +23,26 @@ CREATE TABLE IF NOT EXISTS eye.registry (
   registeredAt            timestamptz(3)  NOT NULL DEFAULT NOW(),
   CONSTRAINT registeredAt_utc CHECK( EXTRACT( TIMEZONE FROM registeredAt ) = '0' )
 );`
+
+	RegistryAdd = `
+INSERT INTO eye.registry (
+            registrationID,
+            application,
+            address,
+            port,
+            database)
+SELECT $1::uuid,
+       $2::varchar,
+       $3::inet,
+       $4::numeric,
+       $5::numeric
+WHERE  NOT EXISTS (
+       SELECT registrationID
+       FROM   eye.registry
+       WHERE  application = $2::varchar
+         AND  address     = $3::inet
+         AND  port        = $4::numeric
+         AND  database    = $5::numeric);`
 
 	RegistryDel = `
 DELETE FROM eye.registry
@@ -35,12 +55,29 @@ WHERE  application = $1::varchar
   AND  address = $2::inet
   AND  port = $3::numeric
   AND  database = $4::numeric;`
+
+	RegistryList = `
+SELECT registrationID
+FROM   eye.registry;`
+
+	RegistryShow = `
+SELECT registrationID,
+       application,
+       address,
+       port,
+       database,
+       registeredAt
+FROM   eye.registry
+WHERE  registrationID = $1::uuid;`
 )
 
 func init() {
+	m[RegistryCreateTable] = `RegistryCreateTable`
 	m[RegistryAdd] = `RegistryAdd`
 	m[RegistryDel] = `RegistryDel`
 	m[RegistrySearch] = `RegistrySearch`
+	m[RegistryList] = `RegistryList`
+	m[RegistryShow] = `RegistryShow`
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

@@ -73,11 +73,11 @@ WHERE  registrationID = $1::uuid;`
 )
 
 func init() {
-	m[RegistryCreateTable] = `RegistryCreateTable`
 	m[RegistryAdd] = `RegistryAdd`
+	m[RegistryCreateTable] = `RegistryCreateTable`
 	m[RegistryDel] = `RegistryDel`
-	m[RegistrySearch] = `RegistrySearch`
 	m[RegistryList] = `RegistryList`
+	m[RegistrySearch] = `RegistrySearch`
 	m[RegistryShow] = `RegistryShow`
 }
 

@@ -80,6 +80,14 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request,
 			return
 		}
 		request.Action = msg.ActionSearch
+		// negative+zero port numbers are invalid
+		if request.Search.Registration.Port <= 0 {
+			replyBadRequest(&w, &request, nil)
+			return
+		}
+
+		// no zero-value 0 handling since port 0 (== port autoselect) is
+		// invalid
 	}
 	if db := r.Form.Get(`database`); db != `` {
 		if iDb, err := strconv.ParseInt(db, 10, 64); err == nil {
@@ -89,6 +97,19 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request,
 			return
 		}
 		request.Action = msg.ActionSearch
+		// negative database numbers are invalid
+		if request.Search.Registration.Database < 0 {
+			replyBadRequest(&w, &request, nil)
+			return
+		}
+	} else {
+		if request.Action == msg.ActionSearch {
+			// sad workaround: this is a search request, but does not
+			// have database number as parameter. Since 0 is a valid
+			// Redis DB number, set -1 as unused indicator so it is
+			// possible to differentiate the zero value later
+			request.Search.Registration.Database = -1
+		}
 	}
 
 	if !x.isAuthorized(&request) {

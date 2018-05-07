@@ -32,7 +32,8 @@ type Request struct {
 		PathPrefix string
 	}
 
-	Flags Flags
+	Flags  Flags
+	Search Search
 
 	ConfigurationTask string
 	Configuration     proto.Configuration
@@ -45,6 +46,11 @@ type Flags struct {
 	AlarmClearing          bool
 	CacheInvalidation      bool
 	SendDeploymentFeedback bool
+}
+
+// Search contains search paramaters for this request
+type Search struct {
+	Registration proto.Registration
 }
 
 // New returns a Request

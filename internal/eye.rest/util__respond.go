@@ -27,6 +27,9 @@ func respond(w *http.ResponseWriter, r *msg.Result) {
 	// create external protocol result
 	protoRes := proto.NewConfigurationResult()
 	feedback = `success`
+	// record what was performed
+	protoRes.Section = r.Section
+	protoRes.Action = r.Action
 
 	// internal result contains an error, copy over into protocol result
 	if r.Error != nil {

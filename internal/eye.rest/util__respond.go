@@ -88,11 +88,15 @@ func respond(w *http.ResponseWriter, r *msg.Result) {
 	}
 
 	if r.Flags.CacheInvalidation && !r.Flags.AlarmClearing {
-		// TODO: asynchronous active cache invalidation
+		// TODO: asynchronous active cache invalidation, since no
+		// clearing action depends on the invalidation having been
+		// performed
 	}
 
 	if r.Flags.CacheInvalidation && r.Flags.AlarmClearing {
-		// TODO:  synchronous active cache invalidation
+		// TODO:  synchronous active cache invalidation, since the
+		// clearing has to be blocked until the invalidation has been
+		// performed
 	}
 
 	// send OK event to CAMS to clear alarmseries

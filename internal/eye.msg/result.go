@@ -51,24 +51,19 @@ func FromRequest(rq *Request) Result {
 // RowCnt takes the return value from sql.Result.RowsAffected and
 // sets the r to status OK if it was 0 or 1 row and ServerError else
 func (r *Result) RowCnt(i int64, err error) bool {
-	if err != nil {
-		r.ServerError(err)
-		return false
-	}
-	switch i {
-	case 0, 1:
-		r.OK()
-		return true
-	default:
-		r.ServerError(fmt.Errorf("Invalid number of rows affected: %d", i))
-		return false
-	}
+	return r.setExpectedRows(i, err, 0, 1)
 }
 
 // ExpectedRows sets r to status OK if the number of rows affected for
 // sql.Result res is contained in expected; ServerError else
 func (r *Result) ExpectedRows(res *sql.Result, expected ...int64) bool {
 	i, err := (*res).RowsAffected()
+	return r.setExpectedRows(i, err, expected...)
+}
+
+// setExpectedRows is the private method that implements ExpectedRows
+// and RowCnt
+func (r *Result) setExpectedRows(i int64, err error, expected ...int64) bool {
 	if err != nil {
 		r.ServerError(err)
 		return false

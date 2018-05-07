@@ -11,6 +11,7 @@ package rest // import "github.com/mjolnir42/eye/internal/eye.rest"
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
@@ -45,7 +46,9 @@ func (x *Rest) RegistrationShow(w http.ResponseWriter, r *http.Request,
 	respond(&w, &result)
 }
 
-// RegistrationList accepts requests to list all registrations
+// RegistrationList accepts requests to list all registrations. If r
+// contains URL query parameters that indicate a search request, the
+// returned list will be filtered for those search terms
 func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
@@ -53,6 +56,40 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request,
 	request := msg.New(r, params)
 	request.Section = msg.SectionRegistration
 	request.Action = msg.ActionList
+
+	// parse URL query parameters to differentiate between ActionList
+	// and ActionSearch. Any number of parameters can be specified at
+	// the same time
+	if err := r.ParseForm(); err != nil {
+		replyBadRequest(&w, &request, err)
+		return
+	}
+	if app := r.Form.Get(`application`); app != `` {
+		request.Action = msg.ActionSearch
+		request.Search.Registration.Application = app
+	}
+	if addr := r.Form.Get(`address`); addr != `` {
+		request.Action = msg.ActionSearch
+		request.Search.Registration.Address = addr
+	}
+	if port := r.Form.Get(`port`); port != `` {
+		if iPort, err := strconv.ParseInt(port, 10, 64); err == nil {
+			request.Search.Registration.Port = iPort
+		} else {
+			replyBadRequest(&w, &request, err)
+			return
+		}
+		request.Action = msg.ActionSearch
+	}
+	if db := r.Form.Get(`database`); db != `` {
+		if iDb, err := strconv.ParseInt(db, 10, 64); err == nil {
+			request.Search.Registration.Database = iDb
+		} else {
+			replyBadRequest(&w, &request, err)
+			return
+		}
+		request.Action = msg.ActionSearch
+	}
 
 	if !x.isAuthorized(&request) {
 		replyForbidden(&w, &request, nil)

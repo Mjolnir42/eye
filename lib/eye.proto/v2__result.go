@@ -31,6 +31,8 @@ const (
 type Result struct {
 	StatusCode     uint16           `json:"statusCode"`
 	StatusText     string           `json:"statusText"`
+	Section        string           `json:"section"`
+	Action         string           `json:"action"`
 	Errors         *[]string        `json:"errors,omitempty"`
 	Configurations *[]Configuration `json:"configurations,omitempty"`
 	Registrations  *[]Registration  `json:"registrations,omitempty"`

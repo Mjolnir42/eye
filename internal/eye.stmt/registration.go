@@ -70,6 +70,15 @@ SELECT registrationID,
        registeredAt
 FROM   eye.registry
 WHERE  registrationID = $1::uuid;`
+
+	RegistryUpdate = `
+UPDATE eye.registry
+SET    application = $2::varchar,
+       address = $3::inet,
+       port = $4::numeric,
+       database = $5::numeric,
+       registeredAt = $6::timestamptz
+WHERE  registrationID = $1::uuid;`
 )
 
 func init() {
@@ -79,6 +88,7 @@ func init() {
 	m[RegistryList] = `RegistryList`
 	m[RegistrySearch] = `RegistrySearch`
 	m[RegistryShow] = `RegistryShow`
+	m[RegistryUpdate] = `RegistryUpdate`
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

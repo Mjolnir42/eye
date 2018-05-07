@@ -9,6 +9,7 @@
 package msg // import "github.com/mjolnir42/eye/internal/eye.msg"
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 
@@ -62,6 +63,25 @@ func (r *Result) RowCnt(i int64, err error) bool {
 		r.ServerError(fmt.Errorf("Invalid number of rows affected: %d", i))
 		return false
 	}
+}
+
+// ExpectedRows sets r to status OK if the number of rows affected for
+// sql.Result res is contained in expected; ServerError else
+func (r *Result) ExpectedRows(res *sql.Result, expected ...int64) bool {
+	i, err := (*res).RowsAffected()
+	if err != nil {
+		r.ServerError(err)
+		return false
+	}
+	for _, num := range expected {
+		if num == i {
+			r.OK()
+			return true
+		}
+	}
+	r.ServerError(fmt.Errorf("Invalid number of rows affected: %d - expected: %v",
+		i, expected))
+	return false
 }
 
 // UnknownRequest is a wrapper function for NotImplemented using a

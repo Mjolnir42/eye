@@ -50,12 +50,17 @@ DELETE FROM eye.registry
 WHERE  registrationID = $1::uuid;`
 
 	RegistrySearch = `
-SELECT registrationID
+SELECT registrationID,
+       application,
+       address,
+       port,
+       database,
+       registeredAt
 FROM   eye.registry
-WHERE  application = $1::varchar
-  AND  address = $2::inet
-  AND  port = $3::numeric
-  AND  database = $4::numeric;`
+WHERE  (application = $1::varchar OR $1::varchar IS NULL)
+  AND  (address = $2::inet OR $2::inet IS NULL)
+  AND  (port = $3::numeric OR $3::numeric IS NULL)
+  AND  (database = $4::numeric OR $4::numeric IS NULL);`
 
 	RegistryList = `
 SELECT registrationID

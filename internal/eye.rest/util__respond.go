@@ -22,10 +22,20 @@ func respond(w *http.ResponseWriter, r *msg.Result) {
 		bjson    []byte
 		err      error
 		feedback string
+		protoRes proto.Result
 	)
 
 	// create external protocol result
-	protoRes := proto.NewConfigurationResult()
+	switch r.Section {
+	case msg.SectionConfiguration:
+		protoRes = proto.NewConfigurationResult()
+	case msg.SectionDeployment:
+		protoRes = proto.NewConfigurationResult()
+	case msg.SectionLookup:
+		protoRes = proto.NewConfigurationResult()
+	case msg.SectionRegistration:
+		protoRes = proto.NewRegistrationResult()
+	}
 	feedback = `success`
 	// record what was performed
 	protoRes.Section = r.Section
@@ -38,11 +48,23 @@ func respond(w *http.ResponseWriter, r *msg.Result) {
 	}
 
 	// copy internal result data into protocol result
-	*protoRes.Configurations = append(*protoRes.Configurations, r.Configuration...)
+	switch r.Section {
+	case msg.SectionConfiguration:
+		*protoRes.Configurations = append(*protoRes.Configurations, r.Configuration...)
+	case msg.SectionDeployment:
+		*protoRes.Configurations = append(*protoRes.Configurations, r.Configuration...)
+	case msg.SectionLookup:
+		*protoRes.Configurations = append(*protoRes.Configurations, r.Configuration...)
+	case msg.SectionRegistration:
+		*protoRes.Registrations = append(*protoRes.Registrations, r.Registration...)
+	}
 
-	//
-	if len(*protoRes.Configurations) == 0 {
+	// trigger omitempty JSON encoding conditions if applicable
+	if protoRes.Configurations != nil && len(*protoRes.Configurations) == 0 {
 		*protoRes.Configurations = nil
+	}
+	if protoRes.Registrations != nil && len(*protoRes.Registrations) == 0 {
+		*protoRes.Registrations = nil
 	}
 
 	// set protocol result status
@@ -54,12 +76,10 @@ func respond(w *http.ResponseWriter, r *msg.Result) {
 	// no alarm clearing for failed requests
 	case r.Code >= 400:
 		*protoRes.Configurations = nil
+		*protoRes.Registrations = nil
 		r.Flags.CacheInvalidation = false
 		r.Flags.AlarmClearing = false
 		feedback = `failed`
-	// trigger omitempty json option for empty results
-	case len(*protoRes.Configurations) == 0:
-		*protoRes.Configurations = nil
 	}
 
 	// send deployment feedback to SOMA

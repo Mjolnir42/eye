@@ -19,14 +19,15 @@ import (
 
 // RegistrationRead handles read requests for hash lookups
 type RegistrationRead struct {
-	Input    chan msg.Request
-	Shutdown chan struct{}
-	conn     *sql.DB
-	stmtList *sql.Stmt
-	stmtShow *sql.Stmt
-	appLog   *logrus.Logger
-	reqLog   *logrus.Logger
-	errLog   *logrus.Logger
+	Input      chan msg.Request
+	Shutdown   chan struct{}
+	conn       *sql.DB
+	stmtList   *sql.Stmt
+	stmtSearch *sql.Stmt
+	stmtShow   *sql.Stmt
+	appLog     *logrus.Logger
+	reqLog     *logrus.Logger
+	errLog     *logrus.Logger
 }
 
 // newRegistrationRead return a new RegistrationRead handler with input buffer of length
@@ -46,6 +47,8 @@ func (r *RegistrationRead) process(q *msg.Request) {
 		r.list(q, &result)
 	case msg.ActionShow:
 		r.show(q, &result)
+	case msg.ActionSearch:
+		r.search(q, &result)
 	default:
 		result.UnknownRequest(q)
 	}
@@ -115,6 +118,83 @@ func (r *RegistrationRead) show(q *msg.Request, mr *msg.Result) {
 		Database:     database,
 		RegisteredAt: registeredAt,
 	})
+	mr.OK()
+}
+
+// search returns all registrations that fulfull a specific search
+// condition
+func (r *RegistrationRead) search(q *msg.Request, mr *msg.Result) {
+	var (
+		rows                                 *sql.Rows
+		err                                  error
+		searchApp, searchAddr                sql.NullString
+		searchPort, searchDB                 sql.NullInt64
+		registrationID, application, address string
+		port, database                       int64
+		registeredAt                         time.Time
+	)
+
+	// set NULL-able query conditions
+	if q.Search.Registration.Application != `` {
+		searchApp.String = q.Search.Registration.Application
+		searchApp.Valid = true
+	}
+	if q.Search.Registration.Address != `` {
+		searchAddr.String = q.Search.Registration.Address
+		searchAddr.Valid = true
+	}
+	if q.Search.Registration.Port != 0 {
+		searchPort.Int64 = q.Search.Registration.Port
+		searchPort.Valid = true
+	}
+	if q.Search.Registration.Database != -1 {
+		// REST encodes unspecified database parameter as -1 since 0 is
+		// valid
+		searchDB.Int64 = q.Search.Registration.Database
+		searchDB.Valid = true
+	}
+
+	// perform search
+	if rows, err = r.stmtSearch.Query(
+		searchApp,
+		searchAddr,
+		searchPort,
+		searchDB,
+	); err != nil {
+		mr.ServerError(err)
+		return
+	}
+
+	// iterate over result list
+	for rows.Next() {
+		if err = rows.Scan(
+			&registrationID,
+			&application,
+			&address,
+			&port,
+			&database,
+			&registeredAt,
+		); err != nil {
+			rows.Close()
+			mr.ServerError(err)
+			return
+		}
+		// build result list
+		mr.Registration = append(mr.Registration, proto.Registration{
+			ID:           registrationID,
+			Application:  application,
+			Address:      address,
+			Port:         port,
+			Database:     database,
+			RegisteredAt: registeredAt,
+		})
+	}
+
+	// check for errors which occurred during iteration
+	if err = rows.Err(); err != nil {
+		mr.ServerError(err)
+		return
+	}
 	mr.OK()
 }
 

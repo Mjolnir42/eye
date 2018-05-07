@@ -31,8 +31,9 @@ func (r *RegistrationRead) Run() {
 	var err error
 
 	for statement, prepStmt := range map[string]*sql.Stmt{
-		stmt.RegistryList: r.stmtList,
-		stmt.RegistryShow: r.stmtShow,
+		stmt.RegistryList:   r.stmtList,
+		stmt.RegistrySearch: r.stmtSearch,
+		stmt.RegistryShow:   r.stmtShow,
 	} {
 		if prepStmt, err = r.conn.Prepare(statement); err != nil {
 			r.errLog.Fatal(`lookup`, err, stmt.Name(statement))

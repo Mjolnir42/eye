@@ -24,7 +24,7 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/go-resty/resty"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	proto "github.com/mjolnir42/eye/lib/eye.proto"
+	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 	somaproto "github.com/mjolnir42/soma/lib/proto"
 )
 
@@ -65,20 +65,19 @@ func clearCamsAlarm(res *msg.Result) {
 
 // processDeploymentDetails creates an eye protocol configuration from
 // SOMA deployment details
-func processDeploymentDetails(details *somaproto.Deployment) (string, proto.Configuration, error) {
+func processDeploymentDetails(details *somaproto.Deployment) (string, v2.Configuration, error) {
 	lookupID := calculateLookupID(details.Node.AssetID, details.Metric.Path)
 
-	config := proto.Configuration{
-		ID:       details.CheckInstance.InstanceID,
-		Metric:   details.Metric.Path,
-		Interval: details.CheckConfig.Interval,
-		//HostID:   strconv.FormatUint(details.Node.AssetID, 10),
+	config := v2.Configuration{
 		HostID: details.Node.AssetID,
-		Metadata: proto.MetaData{
-			Monitoring: details.Monitoring.Name,
-			Team:       details.Team.Name,
-		},
-		Thresholds: []proto.Threshold{},
+		ID:     details.CheckInstance.InstanceID,
+		Metric: details.Metric.Path,
+	}
+	data := v2.Data{
+		Interval:   details.CheckConfig.Interval,
+		Monitoring: details.Monitoring.Name,
+		Team:       details.Team.Name,
+		Thresholds: []v2.Threshold{},
 	}
 
 	// append filesystem to disk metrics
@@ -90,41 +89,43 @@ func processDeploymentDetails(details *somaproto.Deployment) (string, proto.Conf
 		`disk.usage.percent`:
 		mountpoint := getServiceAttributeValue(details, `filesystem`)
 		if mountpoint == `` {
-			return ``, proto.Configuration{}, fmt.Errorf("Disk metric %s is missing filesystem service attribute", config.Metric)
+			return ``, v2.Configuration{}, fmt.Errorf("Disk metric %s is missing filesystem service attribute", config.Metric)
 		}
 
 		// update metric path and recalculate updated lookupID
 		config.Metric = fmt.Sprintf("%s:%s", config.Metric, mountpoint)
 		lookupID = calculateLookupID(details.Node.AssetID, details.Metric.Path)
 	}
+	config.LookupID = lookupID
 
 	// set oncall duty
 	if details.Oncall != nil && details.Oncall.ID != `` {
-		config.Oncall = fmt.Sprintf("%s (%s)", details.Oncall.Name, details.Oncall.Number)
+		data.Oncall = fmt.Sprintf("%s (%s)", details.Oncall.Name, details.Oncall.Number)
 	}
 
-	config.Metadata.Targethost = getTargetHost(details)
+	data.Targethost = getTargetHost(details)
 
 	// construct item.Metadata.Source
 	if details.Service != nil && details.Service.Name != `` {
-		config.Metadata.Source = fmt.Sprintf("%s, %s", details.Service.Name, details.CheckConfig.Name)
+		data.Source = fmt.Sprintf("%s, %s", details.Service.Name, details.CheckConfig.Name)
 	} else {
-		config.Metadata.Source = fmt.Sprintf("System (%s), %s", details.Node.Name, details.CheckConfig.Name)
+		data.Source = fmt.Sprintf("System (%s), %s", details.Node.Name, details.CheckConfig.Name)
 	}
 
 	// slurp all thresholds
 	for _, thr := range details.CheckConfig.Thresholds {
-		t := proto.Threshold{
+		t := v2.Threshold{
 			Predicate: thr.Predicate.Symbol,
 			Level:     thr.Level.Numeric,
 			Value:     thr.Value,
 		}
-		config.Thresholds = append(config.Thresholds, t)
+		data.Thresholds = append(data.Thresholds, t)
 	}
+	config.Data = []v2.Data{data}
 
 	govalidator.SetFieldsRequiredByDefault(true)
 	if ok, err := govalidator.ValidateStruct(config); !ok {
-		return ``, proto.Configuration{}, err
+		return ``, v2.Configuration{}, err
 	}
 	return lookupID, config, nil
 }
@@ -195,12 +196,37 @@ func getTargetHost(details *somaproto.Deployment) string {
 
 // resolveFlags sets the request flags of rqInternal based on the user
 // input in rqProtocol as well as the request type
-func resolveFlags(rqProtocol *proto.Request, rqInternal *msg.Request) error {
+func resolveFlags(rqProtocol *v2.Request, rqInternal *msg.Request) error {
 	switch rqInternal.Section {
 	case msg.SectionConfiguration:
 		switch rqInternal.Action {
-		case msg.ActionAdd, msg.ActionUpdate, msg.ActionRemove:
-			rqInternal.Flags.AlarmClearing = false
+		case msg.ActionRemove:
+			if val, err := strconv.ParseBool(rqProtocol.Flags.AlarmClearing); err != nil {
+				// disable by default
+				rqInternal.Flags.AlarmClearing = false
+			} else if val {
+				// explicit enable
+				rqInternal.Flags.AlarmClearing = true
+			} else {
+				rqInternal.Flags.AlarmClearing = false
+			}
+			fallthrough
+
+		case msg.ActionAdd, msg.ActionUpdate:
+			if val, err := strconv.ParseBool(rqProtocol.Flags.ResetActivation); err != nil {
+				// disable by default
+				rqInternal.Flags.ResetActivation = false
+
+				// ...but enable by default if AlarmClearing is enabled
+				if rqInternal.Flags.AlarmClearing {
+					rqInternal.Flags.ResetActivation = true
+				}
+			} else if val {
+				// explicit enable
+				rqInternal.Flags.ResetActivation = true
+			} else {
+				rqInternal.Flags.ResetActivation = false
+			}
 
 			if val, err := strconv.ParseBool(rqProtocol.Flags.CacheInvalidation); err != nil {
 				// enable by default
@@ -228,14 +254,17 @@ func resolveFlags(rqProtocol *proto.Request, rqInternal *msg.Request) error {
 		case msg.TaskRollout:
 			rqInternal.Flags.AlarmClearing = false
 			rqInternal.Flags.CacheInvalidation = true
+			rqInternal.Flags.ResetActivation = false
 			rqInternal.Flags.SendDeploymentFeedback = true
 		case msg.TaskDeprovision:
 			rqInternal.Flags.AlarmClearing = false
 			rqInternal.Flags.CacheInvalidation = false
+			rqInternal.Flags.ResetActivation = false
 			rqInternal.Flags.SendDeploymentFeedback = true
 		case msg.TaskDelete:
 			rqInternal.Flags.AlarmClearing = true
 			rqInternal.Flags.CacheInvalidation = true
+			rqInternal.Flags.ResetActivation = true
 			rqInternal.Flags.SendDeploymentFeedback = true
 		}
 	}

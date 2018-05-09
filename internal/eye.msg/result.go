@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"net/http"
 
-	proto "github.com/mjolnir42/eye/lib/eye.proto"
+	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -24,14 +24,15 @@ type Result struct {
 	Action  string
 	Code    uint16
 	Error   error
+	Version int
 	Super   Supervisor
 
 	Flags Flags
 
 	FeedbackURL       string
 	ConfigurationTask string
-	Configuration     []proto.Configuration
-	Registration      []proto.Registration
+	Configuration     []v2.Configuration
+	Registration      []v2.Registration
 
 	fixated bool
 }
@@ -45,6 +46,7 @@ func FromRequest(rq *Request) Result {
 		FeedbackURL:       rq.FeedbackURL,
 		ConfigurationTask: rq.ConfigurationTask,
 		Flags:             rq.Flags,
+		Version:           rq.Version,
 	}
 }
 
@@ -192,13 +194,13 @@ func (r *Result) setError(err error) {
 func (r *Result) clear() {
 	switch r.Section {
 	case SectionLookup:
-		r.Configuration = []proto.Configuration{}
+		r.Configuration = []v2.Configuration{}
 	case SectionDeployment:
-		r.Configuration = []proto.Configuration{}
+		r.Configuration = []v2.Configuration{}
 	case SectionConfiguration:
-		r.Configuration = []proto.Configuration{}
+		r.Configuration = []v2.Configuration{}
 	case SectionRegistration:
-		r.Registration = []proto.Registration{}
+		r.Registration = []v2.Registration{}
 	}
 }
 

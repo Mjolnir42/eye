@@ -56,20 +56,8 @@ func (w *DeploymentWrite) process(q *msg.Request) {
 
 //
 func (w *DeploymentWrite) notification(q *msg.Request, mr *msg.Result) {
-	var (
-		err                   error
-		configurationID, task string
-	)
-
-	// save q.ConfigurationTask and clear it if q.Action ==
-	// msg.ActionProcess. In that case the DeploymentDetails came via
-	// POST request instead of PushNotification and no rollout update
-	// feedback is required - which triggers in eye.REST on
-	// q.ConfigurationTask being set
-	task = q.ConfigurationTask
-	if q.Action == msg.ActionProcess {
-		q.ConfigurationTask = ``
-	}
+	var err error
+	var configurationID string
 
 	if err = w.stmtConfigExists.QueryRow(
 		q.Configuration.ID,
@@ -85,7 +73,7 @@ func (w *DeploymentWrite) notification(q *msg.Request, mr *msg.Result) {
 	handler := handlerLookup.Get(`configuration_w`)
 
 	// check if we have the configuration
-	switch task {
+	switch q.ConfigurationTask {
 	case msg.TaskRollout:
 		// rollout + configuration does not exist -> ConfigurationAdd
 		if err == sql.ErrNoRows {
@@ -121,7 +109,7 @@ func (w *DeploymentWrite) notification(q *msg.Request, mr *msg.Result) {
 	}
 
 	q.Section = msg.SectionConfiguration
-	switch task {
+	switch q.ConfigurationTask {
 	case msg.TaskRollout:
 		q.Action = msg.ActionUpdate
 	case msg.TaskDelete, msg.TaskDeprovision:

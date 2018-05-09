@@ -81,7 +81,7 @@ func (run *runtime) connectDatabase() {
 
 	// required schema versions
 	required := map[string]int64{
-		`eye`: 201804200001,
+		`eye`: 201805070001,
 	}
 
 	// verify schema versions

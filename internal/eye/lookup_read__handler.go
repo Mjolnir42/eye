@@ -32,7 +32,7 @@ func (r *LookupRead) Run() {
 	var err error
 
 	for statement, prepStmt := range map[string]*sql.Stmt{
-		stmt.LookupSearch: r.stmtSearch,
+		stmt.NewLookupSearch: r.stmtCfgLookup,
 	} {
 		if prepStmt, err = r.conn.Prepare(statement); err != nil {
 			r.errLog.Fatal(`lookup`, err, stmt.Name(statement))

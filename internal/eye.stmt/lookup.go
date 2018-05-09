@@ -13,17 +13,32 @@ package stmt // import "github.com/mjolnir42/eye/internal/eye.stmt"
 const (
 	LookupStatements = ``
 
-	LookupSearch = `
-SELECT configuration
-FROM   eye.configurations
-WHERE  lookupID = $1::varchar;`
+	NewLookupSearch = `
+SELECT    c.configurationID,
+          d.dataID,
+          lower(d.validity),
+          upper(d.validity),
+          d.configuration,
+		  lower(p.provision_period),
+		  upper(p.provision_period),
+		  p.tasks,
+	      a.activatedAt
+FROM      eye.configurations AS c
+JOIN      eye.configurations_data AS d
+  ON      c.configurationID = d.configurationID
+JOIN      eye.provisions AS p
+  ON      d.dataID = p.dataID
+LEFT JOIN eye.activations AS a
+       ON c.configurationID = a.configurationID
+WHERE     c.lookupID = $1::varchar
+  AND     d.validity @> NOW()::timestamptz;`
 
 	LookupExists = `
 SELECT lookupID
 FROM   eye.lookup
 WHERE  lookupID = $1::varchar;`
 
-	LookupAdd = `
+	NewLookupAdd = `
 INSERT INTO eye.lookup (
             lookupID,
             hostID,
@@ -37,10 +52,6 @@ WHERE  NOT EXISTS (
        WHERE  lookupID = $1::varchar
           OR  ( hostID = $2::numeric AND metric = $3::text));`
 
-	LookupRemove = `
-DELETE FROM eye.lookup
-WHERE       lookupID = $1::varchar;`
-
 	LookupIDForConfiguration = `
 SELECT lookupID
 FROM   eye.configurations
@@ -48,11 +59,11 @@ WHERE  configurationID = $1::uuid;`
 )
 
 func init() {
-	m[LookupAdd] = `LookupAdd`
 	m[LookupExists] = `LookupExists`
 	m[LookupIDForConfiguration] = `LookupIDForConfiguration`
-	m[LookupRemove] = `LookupRemove`
-	m[LookupSearch] = `LookupSearch`
+
+	m[NewLookupSearch] = `NewLookupSearch`
+	m[NewLookupAdd] = `NewLookupAdd`
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

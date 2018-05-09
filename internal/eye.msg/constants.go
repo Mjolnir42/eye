@@ -8,6 +8,13 @@
 
 package msg // import "github.com/mjolnir42/eye/internal/eye.msg"
 
+// API protocol versions
+const (
+	ProtocolInvalid int = iota
+	ProtocolOne
+	ProtocolTwo
+)
+
 // Privileged access permission categories
 const (
 	CategoryOmnipotence = `omnipotence`
@@ -33,6 +40,7 @@ const (
 	TaskDeprovision      = `deprovision`
 	TaskPending          = `pending`
 	TaskRollout          = `rollout`
+	TaskClearing         = `clearing`
 )
 
 // Actions for the various permission sections

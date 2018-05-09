@@ -22,12 +22,15 @@ SELECT schema,
        MAX(version) AS version
 FROM   public.schema_versions
 GROUP  BY schema;`
+
+	ReadOnlyTransaction = `SET TRANSACTION READ ONLY, DEFERRABLE;`
 )
 
 func init() {
 	m[DatabaseTimezone] = `DatabaseTimezone`
 	m[DatabaseIsolationLevel] = `DatabaseIsolationLevel`
 	m[DatabaseSchemaVersion] = `DatabaseSchemaVersion`
+	m[ReadOnlyTransaction] = `ReadOnlyTransaction`
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

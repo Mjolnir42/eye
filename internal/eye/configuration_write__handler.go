@@ -32,16 +32,20 @@ func (w *ConfigurationWrite) Run() {
 	var err error
 
 	for statement, prepStmt := range map[string]*sql.Stmt{
-		stmt.ConfigurationActivate:         w.stmtConfigurationActivate,
-		stmt.ConfigurationAdd:              w.stmtConfigurationAdd,
-		stmt.ConfigurationCountForLookupID: w.stmtConfigurationCountForLookupID,
-		stmt.ConfigurationProvision:        w.stmtConfigurationProvision,
-		stmt.ConfigurationRemove:           w.stmtConfigurationRemove,
-		stmt.ConfigurationShow:             w.stmtConfigurationShow,
-		stmt.ConfigurationUpdate:           w.stmtConfigurationUpdate,
-		stmt.LookupAdd:                     w.stmtLookupAdd,
-		stmt.LookupIDForConfiguration:      w.stmtLookupIDForConfiguration,
-		stmt.LookupRemove:                  w.stmtLookupRemove,
+		stmt.ConfigurationUpdate:      w.stmtConfigurationUpdate,
+		stmt.LookupIDForConfiguration: w.stmtLookupIDForConfiguration,
+		// NEW
+		stmt.NewLookupAdd:            w.stmtNewLookupAdd,
+		stmt.CfgAddID:                w.stmtCfgAddID,
+		stmt.CfgSelectValidForUpdate: w.stmtCfgSelectValidForUpdate,
+		stmt.CfgDataUpdateValidity:   w.stmtCfgDataUpdateValidity,
+		stmt.CfgAddData:              w.stmtCfgAddData,
+		stmt.ProvAdd:                 w.stmtProvAdd,
+		stmt.ActivationGet:           w.stmtActivationGet,
+		stmt.ProvFinalize:            w.stmtProvFinalize,
+		stmt.ActivationDel:           w.stmtActivationDel,
+		stmt.CfgShow:                 w.stmtCfgShow,
+		stmt.ActivationSet:           w.stmtActivationSet,
 	} {
 		if prepStmt, err = w.conn.Prepare(statement); err != nil {
 			w.errLog.Fatal(`lookup`, err, stmt.Name(statement))

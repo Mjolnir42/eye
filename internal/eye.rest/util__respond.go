@@ -13,28 +13,61 @@ import (
 	"net/http"
 
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	proto "github.com/mjolnir42/eye/lib/eye.proto"
+	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 )
 
 // respond is the output function for all requests
 func respond(w *http.ResponseWriter, r *msg.Result) {
+	switch r.Version {
+	case msg.ProtocolInvalid:
+		panic(`API Protocol 0 is not valid`)
+	case msg.ProtocolOne:
+		respondV1(w, r)
+	case msg.ProtocolTwo:
+		respondV2(w, r)
+	}
+}
+
+// respondV1 is the output function emitting API version 1 results
+func respondV1(w *http.ResponseWriter, r *msg.Result) {
+	switch r.Section {
+	case msg.SectionRegistration:
+		panic(`API Protocol 1 does not have registrations`)
+	}
+
+	if r.Section == msg.SectionConfiguration && r.Action == msg.ActionRemove {
+		if r.Error != nil && r.Code >= 500 {
+			http.Error(*w, r.Error.Error(), http.StatusInternalServerError)
+			return
+		} else if r.Error != nil && r.Code >= 400 {
+			http.Error(*w, r.Error.Error(), http.StatusBadRequest)
+			return
+		}
+		(*w).WriteHeader(http.StatusNoContent)
+		(*w).Write(nil)
+		return
+	}
+}
+
+// respondV2 is the output function emitting API version 2 results
+func respondV2(w *http.ResponseWriter, r *msg.Result) {
 	var (
 		bjson    []byte
 		err      error
 		feedback string
-		protoRes proto.Result
+		protoRes v2.Result
 	)
 
 	// create external protocol result
 	switch r.Section {
 	case msg.SectionConfiguration:
-		protoRes = proto.NewConfigurationResult()
+		protoRes = v2.NewConfigurationResult()
 	case msg.SectionDeployment:
-		protoRes = proto.NewConfigurationResult()
+		protoRes = v2.NewConfigurationResult()
 	case msg.SectionLookup:
-		protoRes = proto.NewConfigurationResult()
+		protoRes = v2.NewConfigurationResult()
 	case msg.SectionRegistration:
-		protoRes = proto.NewRegistrationResult()
+		protoRes = v2.NewRegistrationResult()
 	}
 	feedback = `success`
 	// record what was performed

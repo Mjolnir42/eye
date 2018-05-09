@@ -32,11 +32,13 @@ func (r *ConfigurationRead) Run() {
 	var err error
 
 	for statement, prepStmt := range map[string]*sql.Stmt{
-		stmt.ConfigurationList: r.stmtList,
-		stmt.ConfigurationShow: r.stmtShow,
+		stmt.CfgSelectValid: r.stmtCfgSelectValid,
+		stmt.CfgShow:        r.stmtCfgShow,
+		stmt.ActivationGet:  r.stmtActivationGet,
+		stmt.CfgList:        r.stmtCfgList,
 	} {
 		if prepStmt, err = r.conn.Prepare(statement); err != nil {
-			r.errLog.Fatal(`lookup`, err, stmt.Name(statement))
+			r.errLog.Fatal(`configuration_r`, err, stmt.Name(statement))
 		}
 		defer prepStmt.Close()
 	}

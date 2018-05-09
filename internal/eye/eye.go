@@ -16,6 +16,9 @@ import (
 	"github.com/mjolnir42/erebos"
 )
 
+// RFC3339Milli is a format string for millisecond precision RFC3339
+const RFC3339Milli string = "2006-01-02T15:04:05.000Z07:00"
+
 // handlerLookup is used by eye handlers to communicate with each other
 var handlerLookup *HandlerMap
 

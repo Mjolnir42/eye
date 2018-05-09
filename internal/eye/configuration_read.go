@@ -12,22 +12,27 @@ package eye // import "github.com/mjolnir42/eye/internal/eye"
 import (
 	"database/sql"
 	"encoding/json"
+	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/lib/pq"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	proto "github.com/mjolnir42/eye/lib/eye.proto"
+	stmt "github.com/mjolnir42/eye/internal/eye.stmt"
+	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 )
 
 // ConfigurationRead handles read requests for hash lookups
 type ConfigurationRead struct {
-	Input    chan msg.Request
-	Shutdown chan struct{}
-	conn     *sql.DB
-	stmtList *sql.Stmt
-	stmtShow *sql.Stmt
-	appLog   *logrus.Logger
-	reqLog   *logrus.Logger
-	errLog   *logrus.Logger
+	Input              chan msg.Request
+	Shutdown           chan struct{}
+	conn               *sql.DB
+	stmtCfgSelectValid *sql.Stmt
+	stmtCfgShow        *sql.Stmt
+	stmtActivationGet  *sql.Stmt
+	stmtCfgList        *sql.Stmt
+	appLog             *logrus.Logger
+	reqLog             *logrus.Logger
+	errLog             *logrus.Logger
 }
 
 // newConfigurationRead return a new ConfigurationRead handler with input buffer of length
@@ -61,7 +66,7 @@ func (r *ConfigurationRead) list(q *msg.Request, mr *msg.Result) {
 		err             error
 	)
 
-	if rows, err = r.stmtList.Query(); err != nil {
+	if rows, err = r.stmtCfgList.Query(); err != nil {
 		mr.ServerError(err)
 		return
 	}
@@ -72,7 +77,7 @@ func (r *ConfigurationRead) list(q *msg.Request, mr *msg.Result) {
 			mr.ServerError(err)
 			return
 		}
-		mr.Configuration = append(mr.Configuration, proto.Configuration{
+		mr.Configuration = append(mr.Configuration, v2.Configuration{
 			ID: configurationID,
 		})
 	}
@@ -86,27 +91,110 @@ func (r *ConfigurationRead) list(q *msg.Request, mr *msg.Result) {
 // show returns a specific configuration
 func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
 	var (
-		err           error
-		confResult    string
-		configuration proto.Configuration
+		err                                     error
+		dataID, confResult                      string
+		tasks                                   []string
+		configuration                           v2.Configuration
+		data                                    v2.Data
+		validFrom, validUntil                   time.Time
+		provisionTS, deprovisionTS, activatedAt time.Time
+		tx                                      *sql.Tx
 	)
 
-	if err = r.stmtShow.QueryRow(
+	// open transaction
+	if tx, err = r.conn.Begin(); err != nil {
+		mr.ServerError(err)
+		return
+	}
+
+	// mark transaction read-only
+	if _, err = tx.Exec(stmt.ReadOnlyTransaction); err != nil {
+		mr.ServerError(err)
+		tx.Rollback()
+		return
+	}
+
+	// get currently valid dataID
+	if err = tx.Stmt(r.stmtCfgSelectValid).QueryRow(
 		q.Configuration.ID,
 	).Scan(
-		&confResult,
+		&dataID,
+		&validFrom,
 	); err == sql.ErrNoRows {
 		mr.NotFound(err)
+		tx.Rollback()
 		return
 	} else if err != nil {
 		mr.ServerError(err)
+		tx.Rollback()
 		return
 	}
+
+	// read queried dataID
+	if err = tx.Stmt(r.stmtCfgShow).QueryRow(
+		dataID,
+	).Scan(
+		&confResult,
+		&validUntil,
+		&provisionTS,
+		&deprovisionTS,
+		pq.Array(&tasks),
+	); err == sql.ErrNoRows {
+		mr.NotFound(err)
+		tx.Rollback()
+		return
+	} else if err != nil {
+		mr.ServerError(err)
+		tx.Rollback()
+		return
+	}
+
+	// unmarshal JSON stored within the database
 	if err = json.Unmarshal([]byte(confResult), &configuration); err != nil {
+		mr.ServerError(err)
+		tx.Rollback()
+		return
+	}
+
+	// query if this configurationID is activated
+	if err = tx.Stmt(r.stmtActivationGet).QueryRow(
+		q.Configuration.ID,
+	).Scan(
+		&activatedAt,
+	); err == sql.ErrNoRows {
+		configuration.ActivatedAt = `never`
+	} else if err != nil {
+		mr.ServerError(err)
+		tx.Rollback()
+		return
+	} else {
+		configuration.ActivatedAt = activatedAt.Format(RFC3339Milli)
+	}
+
+	// populate result metadata
+	data = configuration.Data[0]
+	data.Info = v2.MetaInformation{
+		ValidFrom:     validFrom.Format(RFC3339Milli),
+		ProvisionedAt: provisionTS.Format(RFC3339Milli),
+	}
+	if msg.PosTimeInf.Equal(deprovisionTS) {
+		data.Info.DeprovisionedAt = `never`
+	} else {
+		data.Info.DeprovisionedAt = deprovisionTS.Format(RFC3339Milli)
+	}
+	if msg.PosTimeInf.Equal(validUntil) {
+		data.Info.ValidUntil = `infinity`
+	} else {
+		data.Info.ValidUntil = validUntil.Format(RFC3339Milli)
+	}
+	data.Info.Tasks = append(data.Info.Tasks, tasks...)
+	configuration.Data = []v2.Data{data}
+	mr.Configuration = append(mr.Configuration, configuration)
+
+	if err = tx.Commit(); err != nil {
 		mr.ServerError(err)
 		return
 	}
-	mr.Configuration = append(mr.Configuration, configuration)
 	mr.OK()
 }
 

@@ -14,7 +14,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	proto "github.com/mjolnir42/eye/lib/eye.proto"
+	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 )
 
 // RegistrationRead handles read requests for hash lookups
@@ -74,7 +74,7 @@ func (r *RegistrationRead) list(q *msg.Request, mr *msg.Result) {
 			mr.ServerError(err)
 			return
 		}
-		mr.Registration = append(mr.Registration, proto.Registration{
+		mr.Registration = append(mr.Registration, v2.Registration{
 			ID: registrationID,
 		})
 	}
@@ -110,7 +110,7 @@ func (r *RegistrationRead) show(q *msg.Request, mr *msg.Result) {
 		mr.ServerError(err)
 		return
 	}
-	mr.Registration = append(mr.Registration, proto.Registration{
+	mr.Registration = append(mr.Registration, v2.Registration{
 		ID:           registrationID,
 		Application:  application,
 		Address:      address,
@@ -180,7 +180,7 @@ func (r *RegistrationRead) search(q *msg.Request, mr *msg.Result) {
 			return
 		}
 		// build result list
-		mr.Registration = append(mr.Registration, proto.Registration{
+		mr.Registration = append(mr.Registration, v2.Registration{
 			ID:           registrationID,
 			Application:  application,
 			Address:      address,

@@ -10,9 +10,10 @@ package msg // import "github.com/mjolnir42/eye/internal/eye.msg"
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
-	proto "github.com/mjolnir42/eye/lib/eye.proto"
+	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -21,6 +22,7 @@ type Request struct {
 	ID           uuid.UUID
 	Section      string
 	Action       string
+	Version      int
 	RemoteAddr   string
 	AuthUser     string
 	Super        Supervisor
@@ -36,8 +38,8 @@ type Request struct {
 	Search Search
 
 	ConfigurationTask string
-	Configuration     proto.Configuration
-	Registration      proto.Registration
+	Configuration     v2.Configuration
+	Registration      v2.Registration
 }
 
 // Flags represents the fully resolved proto.Request flags as they
@@ -46,21 +48,30 @@ type Flags struct {
 	AlarmClearing          bool
 	CacheInvalidation      bool
 	SendDeploymentFeedback bool
+	ResetActivation        bool
 }
 
 // Search contains search paramaters for this request
 type Search struct {
-	Registration proto.Registration
+	Registration v2.Registration
 }
 
 // New returns a Request
 func New(r *http.Request, params httprouter.Params) Request {
 	returnChannel := make(chan Result, 1)
+	var protocolVersion int
+	switch {
+	case strings.HasPrefix(r.URL.EscapedPath(), `/api/v1/`):
+		protocolVersion = ProtocolOne
+	case strings.HasPrefix(r.URL.EscapedPath(), `/api/v2/`):
+		protocolVersion = ProtocolTwo
+	}
 	return Request{
 		ID:         requestID(params),
 		RemoteAddr: remoteAddr(r),
 		AuthUser:   authUser(params),
 		Reply:      returnChannel,
+		Version:    protocolVersion,
 	}
 }
 

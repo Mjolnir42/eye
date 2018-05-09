@@ -13,30 +13,37 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/lib/pq"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	proto "github.com/mjolnir42/eye/lib/eye.proto"
+	"github.com/mjolnir42/eye/lib/eye.proto/v2"
+	uuid "github.com/satori/go.uuid"
 )
 
-// ConfigurationWrite handles read requests for hash lookups
+// ConfigurationWrite handles write requests for configurations
 type ConfigurationWrite struct {
-	Input                             chan msg.Request
-	Shutdown                          chan struct{}
-	conn                              *sql.DB
-	stmtConfigurationActivate         *sql.Stmt
-	stmtConfigurationAdd              *sql.Stmt
-	stmtConfigurationCountForLookupID *sql.Stmt
-	stmtConfigurationProvision        *sql.Stmt
-	stmtConfigurationRemove           *sql.Stmt
-	stmtConfigurationShow             *sql.Stmt
-	stmtConfigurationUpdate           *sql.Stmt
-	stmtLookupAdd                     *sql.Stmt
-	stmtLookupIDForConfiguration      *sql.Stmt
-	stmtLookupRemove                  *sql.Stmt
-	appLog                            *logrus.Logger
-	reqLog                            *logrus.Logger
-	errLog                            *logrus.Logger
+	Input                        chan msg.Request
+	Shutdown                     chan struct{}
+	conn                         *sql.DB
+	stmtConfigurationUpdate      *sql.Stmt
+	stmtLookupIDForConfiguration *sql.Stmt
+	// NEW
+	stmtNewLookupAdd            *sql.Stmt
+	stmtCfgAddID                *sql.Stmt
+	stmtCfgSelectValidForUpdate *sql.Stmt
+	stmtCfgDataUpdateValidity   *sql.Stmt
+	stmtCfgAddData              *sql.Stmt
+	stmtProvAdd                 *sql.Stmt
+	stmtActivationGet           *sql.Stmt
+	stmtProvFinalize            *sql.Stmt
+	stmtActivationDel           *sql.Stmt
+	stmtCfgShow                 *sql.Stmt
+	stmtActivationSet           *sql.Stmt
+	appLog                      *logrus.Logger
+	reqLog                      *logrus.Logger
+	errLog                      *logrus.Logger
 }
 
 // newConfigurationWrite return a new ConfigurationWrite handler with input buffer of length
@@ -69,11 +76,26 @@ func (w *ConfigurationWrite) process(q *msg.Request) {
 // add inserts a configuration profile into the database
 func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 	var (
-		err   error
-		tx    *sql.Tx
-		jsonb []byte
-		res   sql.Result
+		err                               error
+		tx                                *sql.Tx
+		jsonb                             []byte
+		res                               sql.Result
+		dataID, previousDataID            string
+		data                              v2.Data
+		rolloutTS, validFrom, activatedAt time.Time
+		skipInvalidatePrevious            bool
 	)
+
+	// fully populate Configuration before JSON encoding it
+	rolloutTS = time.Now().UTC()
+	dataID = uuid.Must(uuid.NewV4()).String()
+	q.Configuration.LookupID = q.LookupHash
+	q.Configuration.ActivatedAt = `unknown`
+
+	data = q.Configuration.Data[0]
+	data.ID = dataID
+	data.Info = v2.MetaInformation{}
+	q.Configuration.Data = []v2.Data{data}
 
 	if jsonb, err = json.Marshal(q.Configuration); err != nil {
 		mr.ServerError(err)
@@ -85,7 +107,8 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 		return
 	}
 
-	if res, err = tx.Stmt(w.stmtLookupAdd).Exec(
+	// Register lookup hash
+	if res, err = tx.Stmt(w.stmtNewLookupAdd).Exec(
 		q.LookupHash,
 		int(q.Configuration.HostID),
 		q.Configuration.Metric,
@@ -94,55 +117,150 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 		tx.Rollback()
 		return
 	}
-	// Statement should affect 1 row for the first configuration with
-	// this lookupID and 0 rows afterwards for additional configurations
-	if count, _ := res.RowsAffected(); count > 1 || count < 0 {
-		mr.ServerError(fmt.Errorf("Insert statement affected %d rows", count))
+	if !mr.ExpectedRows(&res, 0, 1) {
 		tx.Rollback()
 		return
 	}
 
-	if res, err = tx.Stmt(w.stmtConfigurationAdd).Exec(
+	// Register configurationID with its lookup hash
+	if res, err = tx.Stmt(w.stmtCfgAddID).Exec(
 		q.Configuration.ID,
 		q.LookupHash,
+	); err != nil {
+		mr.ServerError(err)
+		tx.Rollback()
+		return
+	}
+	if !mr.ExpectedRows(&res, 0, 1) {
+		tx.Rollback()
+		return
+	}
+
+	// database index ensures there is no overlap in validity ranges
+	if err = tx.Stmt(w.stmtCfgSelectValidForUpdate).QueryRow(
+		q.Configuration.ID,
+	).Scan(
+		&previousDataID,
+		&validFrom,
+	); err == sql.ErrNoRows {
+		// no still valid data is a non-error state
+		skipInvalidatePrevious = true
+	} else if err != nil {
+		mr.ServerError(err)
+		tx.Rollback()
+		return
+	}
+
+	if !skipInvalidatePrevious {
+		if res, err = tx.Stmt(w.stmtCfgDataUpdateValidity).Exec(
+			validFrom.Format(RFC3339Milli),
+			rolloutTS.Format(RFC3339Milli),
+			previousDataID,
+		); err != nil {
+			mr.ServerError(err)
+			tx.Rollback()
+			return
+		}
+		if !mr.ExpectedRows(&res, 1) {
+			tx.Rollback()
+			return
+		}
+	}
+
+	// insert configuration data as valid from rolloutTS to infinity
+	if res, err = tx.Stmt(w.stmtCfgAddData).Exec(
+		dataID,
+		q.Configuration.ID,
+		rolloutTS.Format(RFC3339Milli),
 		jsonb,
 	); err != nil {
 		mr.ServerError(err)
 		tx.Rollback()
 		return
 	}
-	// statement should affect 1 row
-	if count, _ := res.RowsAffected(); count != 1 {
-		mr.ServerError(fmt.Errorf("Rollback: insert statement affected %d rows", count))
+	if !mr.ExpectedRows(&res, 1) {
 		tx.Rollback()
 		return
 	}
 
-	if _, err = tx.Stmt(w.stmtConfigurationProvision).Exec(
+	// record provision request
+	if _, err = tx.Stmt(w.stmtProvAdd).Exec(
+		dataID,
 		q.Configuration.ID,
+		rolloutTS.Format(RFC3339Milli),
+		pq.Array([]string{msg.TaskRollout}),
 	); err != nil {
 		mr.ServerError(err)
 		tx.Rollback()
 		return
+	}
+	if !mr.ExpectedRows(&res, 1) {
+		tx.Rollback()
+		return
+	}
+
+	// query if this configurationID is activated
+	if err = tx.Stmt(w.stmtActivationGet).QueryRow(
+		q.Configuration.ID,
+	).Scan(
+		&activatedAt,
+	); err == sql.ErrNoRows {
+		q.Configuration.ActivatedAt = `never`
+	} else if err != nil {
+		mr.ServerError(err)
+		tx.Rollback()
+		return
+	} else {
+		q.Configuration.ActivatedAt = activatedAt.Format(RFC3339Milli)
 	}
 
 	if err = tx.Commit(); err != nil {
 		mr.ServerError(err)
 		return
 	}
+
+	// generate full reply
+	data.Info = v2.MetaInformation{
+		ValidFrom:       rolloutTS.Format(RFC3339Milli),
+		ValidUntil:      `infinity`,
+		ProvisionedAt:   rolloutTS.Format(RFC3339Milli),
+		DeprovisionedAt: `never`,
+		Tasks:           []string{msg.TaskRollout},
+	}
+	q.Configuration.Data = []v2.Data{data}
+	mr.Configuration = append(mr.Configuration, q.Configuration)
 	mr.OK()
 }
 
 // remove deletes a configuration from the database
 func (w *ConfigurationWrite) remove(q *msg.Request, mr *msg.Result) {
 	var (
-		err                  error
-		tx                   *sql.Tx
-		res                  sql.Result
-		lookupID, confResult string
-		popcnt               int
-		configuration        proto.Configuration
+		err                                         error
+		tx                                          *sql.Tx
+		res                                         sql.Result
+		dataID, task, confResult                    string
+		tasks                                       []string
+		provisionTS, deprovisionTS, dbDeprovisionTS time.Time
+		validFrom, validUntil, dbValidUntil         time.Time
+		activatedAt                                 time.Time
+		configuration                               v2.Configuration
+		data                                        v2.Data
 	)
+
+	// deprovision requests have a 15 minute grace window to send the
+	// new configuration data
+	deprovisionTS = time.Now().UTC()
+	task = msg.TaskDeprovision
+	validUntil = deprovisionTS.Add(15 * time.Minute)
+	if q.ConfigurationTask == msg.TaskDelete {
+		// for final deletions, no 15 minute grace period for updates is
+		// required
+		validUntil = deprovisionTS
+		task = msg.TaskDelete
+	}
+	if task == msg.TaskDeprovision && q.Flags.AlarmClearing {
+		task = msg.TaskClearing
+	}
 
 	// open transaction
 	if tx, err = w.conn.Begin(); err != nil {
@@ -150,88 +268,111 @@ func (w *ConfigurationWrite) remove(q *msg.Request, mr *msg.Result) {
 		return
 	}
 
-	// retrieve lookupID for Configuration.ID prior to deleting it; if
-	// this is the last configuration using this hash then the
-	// lookup is deleted as well
-	if err = tx.Stmt(w.stmtLookupIDForConfiguration).QueryRow(
+	// database index ensures there is no overlap in validity ranges
+	if err = tx.Stmt(w.stmtCfgSelectValidForUpdate).QueryRow(
 		q.Configuration.ID,
 	).Scan(
-		&lookupID,
+		&dataID,
+		&validFrom,
 	); err == sql.ErrNoRows {
-		// not being able to delete what we do not have is ok
+		// that which does not exist can not be deleted
 		goto commitTx
 	} else if err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
+		goto abort
 	}
 
-	// retrieve full configuration prior to deleting it; this is
-	// required for requests with q.ConfigurationTask set to
-	// msg.TaskDelete and enabled AlarmClearing so that the OK event can
-	// be constructed with the correct metadata
-	if err = tx.Stmt(w.stmtConfigurationShow).QueryRow(
-		q.Configuration.ID,
+	// load full current configuration prior to invalidating it; this is
+	// required for requests with q.Flags.AlarmClearing set to true so
+	// that the OK event can be constructed with the correct metadata
+	if err = tx.Stmt(w.stmtCfgShow).QueryRow(
+		dataID,
 	).Scan(
 		&confResult,
+		&dbValidUntil,
+		&provisionTS,
+		&dbDeprovisionTS,
+		pq.Array(&tasks),
 	); err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
+		// sql.ErrNoRows == row disappeared mid-transaction
+		goto abort
 	}
 	if err = json.Unmarshal([]byte(confResult), &configuration); err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
+		goto abort
 	}
+
+	// query if this configurationID is activated
+	if err = tx.Stmt(w.stmtActivationGet).QueryRow(
+		q.Configuration.ID,
+	).Scan(
+		&activatedAt,
+	); err == sql.ErrNoRows {
+		configuration.ActivatedAt = `never`
+	} else if err != nil {
+		goto abort
+	} else {
+		configuration.ActivatedAt = activatedAt.Format(RFC3339Milli)
+	}
+
+	// it is entirely possible that the configuration data is about to
+	// expire just as this transaction is running. If validUntil is not
+	// positive infinity then it is kept as is
+	if msg.PosTimeInf.Equal(dbValidUntil) {
+		validUntil = dbValidUntil
+	}
+
+	// if there is already an earlier deprovisioning timestamp it is left in
+	// place
+	if dbDeprovisionTS.Before(deprovisionTS) {
+		deprovisionTS = dbDeprovisionTS
+	}
+
+	// populate result metadata
+	data = configuration.Data[0]
+	data.Info = v2.MetaInformation{
+		ValidFrom:       validFrom.Format(RFC3339Milli),
+		ValidUntil:      validUntil.Format(RFC3339Milli),
+		ProvisionedAt:   provisionTS.Format(RFC3339Milli),
+		DeprovisionedAt: deprovisionTS.Format(RFC3339Milli),
+		Tasks:           tasks,
+	}
+	configuration.Data = []v2.Data{data}
 	mr.Configuration = append(mr.Configuration, configuration)
 
-	// delete configuration
-	if res, err = tx.Stmt(w.stmtConfigurationRemove).Exec(
-		q.Configuration.ID,
+	// invalidate current configuration data
+	if res, err = tx.Stmt(w.stmtCfgDataUpdateValidity).Exec(
+		validFrom.Format(RFC3339Milli),
+		validUntil.Format(RFC3339Milli),
+		dataID,
 	); err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
+		goto abort
 	}
-	// statement should affect 0 or 1 rows
-	if count, _ := res.RowsAffected(); count > 1 || count < 0 {
-		mr.ServerError(fmt.Errorf("Rollback: delete statement affected %d rows", count))
-		tx.Rollback()
-		return
+	if !mr.ExpectedRows(&res, 1) {
+		goto rollback
 	}
 
-	// check number of remaining configurations using the same lookupID
-	if err = tx.Stmt(w.stmtConfigurationCountForLookupID).QueryRow(
-		lookupID,
-	).Scan(
-		&popcnt,
+	// update provisioning record
+	if res, err = tx.Stmt(w.stmtProvFinalize).Exec(
+		dataID,
+		deprovisionTS.Format(RFC3339Milli),
+		task,
 	); err != nil {
-		// SELECT COUNT queries must always return a result row,
-		// so sql.ErrNoRows is fatal
-		mr.ServerError(err)
-		tx.Rollback()
-		return
+		goto abort
 	}
-	if popcnt > 0 {
-		// there are still configurations using the the lookupID, skip
-		// deleting lookupID and commit transaction
-		goto commitTx
+	if !mr.ExpectedRows(&res, 1) {
+		goto rollback
 	}
 
-	// delete lookupID entry
-	if res, err = tx.Stmt(w.stmtLookupRemove).Exec(
-		lookupID,
-	); err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
-	}
-	// statement should affect 1 row
-	if count, _ := res.RowsAffected(); count != 1 {
-		mr.ServerError(fmt.Errorf("Rollback: delete statement affected %d rows", count))
-		tx.Rollback()
-		return
+	// remove the metric activation if required
+	if q.Flags.ResetActivation {
+		if res, err = tx.Stmt(w.stmtActivationDel).Exec(
+			q.Configuration.ID,
+		); err != nil {
+			goto abort
+		}
+		// 0: activation reset on inactive configurations is valid
+		if !mr.ExpectedRows(&res, 0, 1) {
+			goto rollback
+		}
 	}
 
 commitTx:
@@ -240,6 +381,13 @@ commitTx:
 		return
 	}
 	mr.OK()
+	return
+
+abort:
+	mr.ServerError(err)
+
+rollback:
+	tx.Rollback()
 }
 
 // update replaces a configuration
@@ -289,7 +437,7 @@ func (w *ConfigurationWrite) activate(q *msg.Request, mr *msg.Result) {
 	var err error
 	var res sql.Result
 
-	if res, err = w.stmtConfigurationActivate.Exec(
+	if res, err = w.stmtActivationSet.Exec(
 		q.Configuration.ID,
 	); err != nil {
 		mr.ServerError(err)

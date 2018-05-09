@@ -16,7 +16,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	proto "github.com/mjolnir42/eye/lib/eye.proto"
+	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -76,7 +76,7 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionAdd
 
-	cReq := proto.NewConfigurationRequest()
+	cReq := v2.NewConfigurationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
 		replyBadRequest(&w, &request, err)
 		return
@@ -112,7 +112,7 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionUpdate
 
-	cReq := proto.NewConfigurationRequest()
+	cReq := v2.NewConfigurationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
 		replyBadRequest(&w, &request, err)
 		return
@@ -157,16 +157,19 @@ func (x *Rest) ConfigurationRemove(w http.ResponseWriter, r *http.Request,
 	request.Action = msg.ActionRemove
 	request.Configuration.ID = params.ByName(`ID`)
 
-	// request body may contain request flag overrides
-	cReq := proto.NewConfigurationRequest()
-	if err := decodeJSONBody(r, &cReq); err != nil {
-		replyBadRequest(&w, &request, err)
-		return
-	}
+	// request body may contain request flag overrides, API protocol v1
+	// has no request body support
+	if request.Version != msg.ProtocolOne {
+		cReq := v2.NewConfigurationRequest()
+		if err := decodeJSONBody(r, &cReq); err != nil {
+			replyBadRequest(&w, &request, err)
+			return
+		}
 
-	if err := resolveFlags(&cReq, &request); err != nil {
-		replyBadRequest(&w, &request, err)
-		return
+		if err := resolveFlags(&cReq, &request); err != nil {
+			replyBadRequest(&w, &request, err)
+			return
+		}
 	}
 
 	if !x.isAuthorized(&request) {

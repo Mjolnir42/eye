@@ -16,7 +16,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	proto "github.com/mjolnir42/eye/lib/eye.proto"
+	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -132,7 +132,7 @@ func (x *Rest) RegistrationAdd(w http.ResponseWriter, r *http.Request,
 	request.Section = msg.SectionRegistration
 	request.Action = msg.ActionAdd
 
-	cReq := proto.NewRegistrationRequest()
+	cReq := v2.NewRegistrationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
 		replyBadRequest(&w, &request, err)
 		return
@@ -159,7 +159,7 @@ func (x *Rest) RegistrationUpdate(w http.ResponseWriter, r *http.Request,
 	request.Section = msg.SectionRegistration
 	request.Action = msg.ActionUpdate
 
-	cReq := proto.NewRegistrationRequest()
+	cReq := v2.NewRegistrationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
 		replyBadRequest(&w, &request, err)
 		return
@@ -196,7 +196,7 @@ func (x *Rest) RegistrationRemove(w http.ResponseWriter, r *http.Request,
 	request.Registration.ID = params.ByName(`ID`)
 
 	// request body may contain request flag overrides
-	cReq := proto.NewRegistrationRequest()
+	cReq := v2.NewRegistrationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
 		replyBadRequest(&w, &request, err)
 		return

@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package proto // import "github.com/mjolnir42/eye/lib/eye.proto"
+package v2 // import "github.com/mjolnir42/eye/lib/eye.proto/v2"
 
 // Request represents a v2 API request
 type Request struct {
@@ -20,6 +20,7 @@ type Flags struct {
 	AlarmClearing          string `json:"alarm.clearing"`
 	CacheInvalidation      string `json:"enable.cache.invalidation"`
 	SendDeploymentFeedback string `json:"send.deployment.feedback"`
+	ResetActivation        string `json:"reset.activation"`
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

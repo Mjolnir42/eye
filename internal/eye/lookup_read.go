@@ -13,21 +13,23 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/lib/pq"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	proto "github.com/mjolnir42/eye/lib/eye.proto"
+	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 )
 
 // LookupRead handles read requests for hash lookups
 type LookupRead struct {
-	Input      chan msg.Request
-	Shutdown   chan struct{}
-	conn       *sql.DB
-	stmtSearch *sql.Stmt
-	appLog     *logrus.Logger
-	reqLog     *logrus.Logger
-	errLog     *logrus.Logger
+	Input         chan msg.Request
+	Shutdown      chan struct{}
+	conn          *sql.DB
+	stmtCfgLookup *sql.Stmt
+	appLog        *logrus.Logger
+	reqLog        *logrus.Logger
+	errLog        *logrus.Logger
 }
 
 // newLookupRead return a new LookupRead handler with input buffer of length
@@ -54,27 +56,72 @@ func (r *LookupRead) process(q *msg.Request) {
 // configuration returns all configurations matching a specific LookupHash
 func (r *LookupRead) configuration(q *msg.Request, mr *msg.Result) {
 	var (
-		configuration string
-		rows          *sql.Rows
-		err           error
+		configurationID, dataID, configuration string
+		validFrom, validUntil                  time.Time
+		provisionedAt, deprovisionedAt         time.Time
+		activatedAt                            pq.NullTime
+		tasks                                  []string
+		rows                                   *sql.Rows
+		err                                    error
 	)
 
-	if rows, err = r.stmtSearch.Query(q.LookupHash); err != nil {
+	if rows, err = r.stmtCfgLookup.Query(
+		q.LookupHash,
+	); err != nil {
 		mr.ServerError(err)
 		return
 	}
 
 	for rows.Next() {
-		if err = rows.Scan(&configuration); err != nil {
+		if err = rows.Scan(
+			&configurationID,
+			&dataID,
+			&validFrom,
+			&validUntil,
+			&configuration,
+			&provisionedAt,
+			&deprovisionedAt,
+			pq.Array(&tasks),
+			&activatedAt,
+		); err != nil {
 			mr.ServerError(err)
+			rows.Close()
 			return
 		}
 
-		c := proto.Configuration{}
+		c := v2.Configuration{}
 		if err = json.Unmarshal([]byte(configuration), &c); err != nil {
 			mr.ServerError(err)
+			rows.Close()
 			return
 		}
+
+		if activatedAt.Valid {
+			c.ActivatedAt = activatedAt.Time.Format(RFC3339Milli)
+		} else {
+			c.ActivatedAt = `never`
+		}
+		c.LookupID = q.LookupHash
+
+		d := c.Data[0]
+		d.ID = dataID
+		d.Info = v2.MetaInformation{
+			ValidFrom:     validFrom.Format(RFC3339Milli),
+			ProvisionedAt: provisionedAt.Format(RFC3339Milli),
+		}
+		if msg.PosTimeInf.Equal(validUntil) {
+			d.Info.ValidUntil = `infinity`
+		} else {
+			d.Info.ValidUntil = validUntil.Format(RFC3339Milli)
+		}
+		if msg.PosTimeInf.Equal(deprovisionedAt) {
+			d.Info.DeprovisionedAt = `never`
+		} else {
+			d.Info.DeprovisionedAt = deprovisionedAt.Format(RFC3339Milli)
+		}
+		d.Info.Tasks = append(d.Info.Tasks, tasks...)
+		tasks = []string{}
+		c.Data = []v2.Data{d}
 		mr.Configuration = append(mr.Configuration, c)
 	}
 	if err = rows.Err(); err != nil {

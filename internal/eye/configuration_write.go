@@ -67,6 +67,8 @@ func (w *ConfigurationWrite) process(q *msg.Request) {
 		w.update(q, &result)
 	case msg.ActionActivate:
 		w.activate(q, &result)
+	case msg.ActionNop:
+		result.OK()
 	default:
 		result.UnknownRequest(q)
 	}

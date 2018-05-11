@@ -55,19 +55,14 @@ func respondV1(w *http.ResponseWriter, r *msg.Result) {
 				return
 			}
 			sendV1Result(w, code, errstr, &bjson)
-		case msg.ActionAdd:
+		case msg.ActionAdd, msg.ActionUpdate:
 			switch r.Code {
-			case msg.ResultServerError, msg.ResultUnprocessable, msg.ResultBadRequest:
+			case msg.ResultUnprocessable:
 				sendV1Result(w, r.Code, r.Error.Error(), nil)
-			case msg.ResultForbidden:
-				// v1 API has no 403/Forbidden
-				sendV1Result(w, msg.ResultBadRequest, r.Error.Error(), nil)
-			case msg.ResultOK:
-				// v1 API uses 204/NoContent
-				sendV1Result(w, msg.ResultNoContent, ``, nil)
-			default:
-				hardInternalError(w)
 			}
+			// ResultUnprocessable handling is the only difference
+			// between Add|Update and Remove
+			fallthrough
 		case msg.ActionRemove:
 			switch r.Code {
 			case msg.ResultServerError, msg.ResultBadRequest:

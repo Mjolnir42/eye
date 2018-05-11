@@ -32,6 +32,10 @@ func respond(w *http.ResponseWriter, r *msg.Result) {
 func respondV1(w *http.ResponseWriter, r *msg.Result) {
 	var bjson []byte
 	var err error
+	feedback := `failed`
+	// not available via v1
+	r.Flags.CacheInvalidation = false
+	r.Flags.AlarmClearing = false
 
 	switch r.Section {
 	case msg.SectionRegistration:
@@ -73,13 +77,46 @@ func respondV1(w *http.ResponseWriter, r *msg.Result) {
 			case msg.ResultOK:
 				// v1 API uses 204/NoContent
 				sendV1Result(w, msg.ResultNoContent, ``, nil)
+			case msg.ResultUnprocessable:
 			default:
 				hardInternalError(w)
+				return
 			}
+		default:
+			hardInternalError(w)
+			return
 		}
+
+	case msg.SectionDeployment:
+		// v1 Deployment API uses: 204, 410, 412, 422, 500
+		// only failed requests return in SectionDeployment before being
+		// mapped to SectionConfiguration
+		switch r.Code {
+		case msg.ResultBadRequest, msg.ResultForbidden:
+			// v1 API has no 400/BadRequest or 403/Forbidden
+			sendV1Result(w, msg.ResultServerError, r.Error.Error(), nil)
+		case msg.ResultUnprocessable, msg.ResultGone, msg.ResultServerError:
+			sendV1Result(w, r.Code, r.Error.Error(), nil)
+		case msg.ResultBadGateway, msg.ResultGatewayTimeout:
+			// v1 API uses 412/PreconditionFailed for connectivity
+			// errors to SOMA
+			sendV1Result(w, http.StatusPreconditionFailed, r.Error.Error(), nil)
+		default:
+			hardInternalError(w)
+			return
+		}
+
+	default:
+		hardInternalError(w)
 		return
 	}
-	hardInternalError(w)
+
+	if r.Flags.SendDeploymentFeedback {
+		if r.Code == msg.ResultOK {
+			feedback = `success`
+		}
+		go sendSomaFeedback(r.FeedbackURL, feedback)
+	}
 }
 
 // respondV2 is the output function emitting API version 2 results

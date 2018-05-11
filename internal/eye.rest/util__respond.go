@@ -38,6 +38,19 @@ func respondV1(w *http.ResponseWriter, r *msg.Result) {
 	switch r.Section {
 	case msg.SectionConfiguration:
 		switch r.Action {
+		case ActionList:
+			code, errstr, list := r.ExportV1ConfigurationList()
+			if code == msg.ResultOK {
+				if bjson, err = json.Marshal(&list); err != nil {
+					hardInternalError(w)
+					return
+				}
+
+				sendJSONReply(w, &bjson)
+				return
+			}
+			http.Error(*w, errstr, code)
+			return
 		case msg.ActionRemove:
 			if r.Error != nil && r.Code >= msg.ResultServerError {
 				http.Error(*w, r.Error.Error(), http.StatusInternalServerError)

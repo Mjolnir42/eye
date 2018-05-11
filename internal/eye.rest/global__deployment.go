@@ -89,7 +89,7 @@ func (x *Rest) DeploymentProcess(w http.ResponseWriter, r *http.Request,
 	var err error
 	cReq := somaproto.NewDeploymentResult()
 	if err = decodeJSONBody(r, &cReq); err != nil {
-		replyInternalError(&w, &request, err)
+		replyUnprocessableEntity(&w, &request, err)
 		return
 	}
 

@@ -66,4 +66,15 @@ func NewConfigurationResult() Result {
 	}
 }
 
+// InputSanatize ensures metadata fields are empty for c
+func (c *Configuration) InputSanatize() {
+	c.ActivatedAt = ``
+	c.LookupID = ``
+	for i, data := range c.Data {
+		data.ID = ``
+		data.Info = MetaInformation{}
+		c.Data[i] = data
+	}
+}
+
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

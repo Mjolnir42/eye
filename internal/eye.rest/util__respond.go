@@ -35,17 +35,21 @@ func respondV1(w *http.ResponseWriter, r *msg.Result) {
 		panic(`API Protocol 1 does not have registrations`)
 	}
 
-	if r.Section == msg.SectionConfiguration && r.Action == msg.ActionRemove {
-		if r.Error != nil && r.Code >= 500 {
-			http.Error(*w, r.Error.Error(), http.StatusInternalServerError)
-			return
-		} else if r.Error != nil && r.Code >= 400 {
-			http.Error(*w, r.Error.Error(), http.StatusBadRequest)
+	switch r.Section {
+	case msg.SectionConfiguration:
+		switch r.Action {
+		case msg.ActionRemove:
+			if r.Error != nil && r.Code >= msg.ResultServerError {
+				http.Error(*w, r.Error.Error(), http.StatusInternalServerError)
+				return
+			} else if r.Error != nil && r.Code >= ResultBadRequest {
+				http.Error(*w, r.Error.Error(), http.StatusBadRequest)
+				return
+			}
+			(*w).WriteHeader(http.StatusNoContent)
+			(*w).Write(nil)
 			return
 		}
-		(*w).WriteHeader(http.StatusNoContent)
-		(*w).Write(nil)
-		return
 	}
 }
 

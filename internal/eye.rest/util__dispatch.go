@@ -77,6 +77,23 @@ func sendJSONReply(w *http.ResponseWriter, b *[]byte) {
 	(*w).Write(*b)
 }
 
+// sendV1Result returns API Protocol version 1 results
+func sendV1Result(w *http.ResponseWriter, code uint16, errstr string, body *[]byte) {
+	if errstr != `` {
+		http.Error(*w, errstr, int(code))
+		return
+	}
+	if body != nil {
+		(*w).Header().Set("Content-Type", "application/json")
+	}
+	(*w).WriteHeader(int(code))
+	if body == nil {
+		(*w).Write(nil)
+		return
+	}
+	(*w).Write(*body)
+}
+
 // hardInternalError returns a 500 server error with no application data
 // body. This function is intended to be used only if normal response
 // generation itself fails

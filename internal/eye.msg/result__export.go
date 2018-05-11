@@ -17,8 +17,13 @@ import (
 // ExportV1ConfigurationList generates a protocol version 1 list result
 func (r *Result) ExportV1ConfigurationList() (uint16, string, v1.ConfigurationList) {
 	list := v1.ConfigurationList{}
+
+	// v1 list results use status codes 200, 404, 500
+	// v2 list results generate status codes 200, 403, 500
+	// this function maps 403 to 500 and generates 404 for empty 200
+	// results
 	if r.Error != nil {
-		return r.Code, r.Error.Error(), list
+		return ResultServerError, r.Error.Error(), list
 	}
 
 	// v1 returned 404 on empty list results
@@ -28,9 +33,9 @@ func (r *Result) ExportV1ConfigurationList() (uint16, string, v1.ConfigurationLi
 
 	list.ConfigurationItemIDList = make([]string, len(r.Configuration))
 	for i, id := range r.Configuration {
-		list.ConfigurationItemIDList[i] = id
+		list.ConfigurationItemIDList[i] = id.ID
 	}
-	return r.Code, ``, list
+	return ResultOK, ``, list
 }
 
 // ExportV1ConfigurationShow generates a protocol version 1 show result

@@ -30,6 +30,9 @@ func respond(w *http.ResponseWriter, r *msg.Result) {
 
 // respondV1 is the output function emitting API version 1 results
 func respondV1(w *http.ResponseWriter, r *msg.Result) {
+	var bjson []byte
+	var err error
+
 	switch r.Section {
 	case msg.SectionRegistration:
 		panic(`API Protocol 1 does not have registrations`)
@@ -38,24 +41,19 @@ func respondV1(w *http.ResponseWriter, r *msg.Result) {
 	switch r.Section {
 	case msg.SectionConfiguration:
 		switch r.Action {
-		case ActionList:
+		case msg.ActionList:
 			code, errstr, list := r.ExportV1ConfigurationList()
-			if code == msg.ResultOK {
-				if bjson, err = json.Marshal(&list); err != nil {
-					hardInternalError(w)
-					return
-				}
-
-				sendJSONReply(w, &bjson)
+			if bjson, err = json.Marshal(&list); err != nil {
+				hardInternalError(w)
 				return
 			}
-			http.Error(*w, errstr, code)
+			sendV1Result(w, code, errstr, &bjson)
 			return
 		case msg.ActionRemove:
 			if r.Error != nil && r.Code >= msg.ResultServerError {
 				http.Error(*w, r.Error.Error(), http.StatusInternalServerError)
 				return
-			} else if r.Error != nil && r.Code >= ResultBadRequest {
+			} else if r.Error != nil && r.Code >= msg.ResultBadRequest {
 				http.Error(*w, r.Error.Error(), http.StatusBadRequest)
 				return
 			}

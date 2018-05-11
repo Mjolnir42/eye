@@ -58,15 +58,18 @@ func respondV1(w *http.ResponseWriter, r *msg.Result) {
 			sendV1Result(w, code, errstr, &bjson)
 			return
 		case msg.ActionRemove:
-			if r.Error != nil && r.Code >= msg.ResultServerError {
-				http.Error(*w, r.Error.Error(), http.StatusInternalServerError)
-				return
-			} else if r.Error != nil && r.Code >= msg.ResultBadRequest {
-				http.Error(*w, r.Error.Error(), http.StatusBadRequest)
-				return
+			switch r.Code {
+			case msg.ResultServerError, msg.ResultBadRequest:
+				sendV1Result(w, r.Code, r.Error.Error(), nil)
+			case msg.ResultForbidden:
+				// v1 API has no 403/Forbidden
+				sendV1Result(w, msg.ResultBadRequest, r.Error.Error(), nil)
+			case msg.ResultOK:
+				// v1 API uses 204/NoContent
+				sendV1Result(w, msg.ResultNoContent, ``, nil)
+			default:
+				hardInternalError(w)
 			}
-			(*w).WriteHeader(http.StatusNoContent)
-			(*w).Write(nil)
 			return
 		}
 	}

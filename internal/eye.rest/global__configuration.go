@@ -31,13 +31,13 @@ func (x *Rest) ConfigurationShow(w http.ResponseWriter, r *http.Request,
 	request.Action = msg.ActionShow
 	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
 
-	if !x.isAuthorized(&request) {
-		replyForbidden(&w, &request, nil)
+	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
+		replyBadRequest(&w, &request, err)
 		return
 	}
 
-	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
-		replyBadRequest(&w, &request, err)
+	if !x.isAuthorized(&request) {
+		replyForbidden(&w, &request, nil)
 		return
 	}
 
@@ -127,12 +127,17 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	)
 	request.Configuration.LookupID = request.LookupHash
 
-	if request.Configuration.ID != params.ByName(`ID`) {
+	if request.Configuration.ID != strings.ToLower(params.ByName(`ID`)) {
 		replyBadRequest(&w, &request, fmt.Errorf(
 			"Mismatched IDs in update: [%s] vs [%s]",
 			request.Configuration.ID,
-			params.ByName(`ID`),
+			strings.ToLower(params.ByName(`ID`)),
 		))
+	}
+
+	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
+		replyBadRequest(&w, &request, err)
+		return
 	}
 
 	if err := resolveFlags(&cReq, &request); err != nil {
@@ -159,7 +164,12 @@ func (x *Rest) ConfigurationRemove(w http.ResponseWriter, r *http.Request,
 	request := msg.New(r, params)
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionRemove
-	request.Configuration.ID = params.ByName(`ID`)
+	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
+
+	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
+		replyBadRequest(&w, &request, err)
+		return
+	}
 
 	// request body may contain request flag overrides, API protocol v1
 	// has no request body support
@@ -195,7 +205,12 @@ func (x *Rest) ConfigurationActivate(w http.ResponseWriter, r *http.Request,
 	request := msg.New(r, params)
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionActivate
-	request.Configuration.ID = params.ByName(`ID`)
+	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
+
+	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
+		replyBadRequest(&w, &request, err)
+		return
+	}
 
 	if !x.isAuthorized(&request) {
 		replyForbidden(&w, &request, nil)

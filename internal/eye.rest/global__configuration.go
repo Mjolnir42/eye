@@ -82,10 +82,12 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	request.Configuration = *cReq.Configuration
+	request.Configuration.InputSanatize()
 	request.LookupHash = calculateLookupID(
 		request.Configuration.HostID,
 		request.Configuration.Metric,
 	)
+	request.Configuration.LookupID = request.LookupHash
 
 	if err := resolveFlags(&cReq, &request); err != nil {
 		replyBadRequest(&w, &request, err)
@@ -118,10 +120,12 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	request.Configuration = *cReq.Configuration
+	request.Configuration.InputSanatize()
 	request.LookupHash = calculateLookupID(
 		request.Configuration.HostID,
 		request.Configuration.Metric,
 	)
+	request.Configuration.LookupID = request.LookupHash
 
 	if request.Configuration.ID != params.ByName(`ID`) {
 		replyBadRequest(&w, &request, fmt.Errorf(

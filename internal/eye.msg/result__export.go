@@ -33,4 +33,48 @@ func (r *Result) ExportV1ConfigurationList() (uint16, string, v1.ConfigurationLi
 	return r.Code, ``, list
 }
 
+// ExportV1ConfigurationShow generates a protocol version 1 show result
+func (r *Result) ExportV1ConfigurationShow() (uint16, string, v1.ConfigurationData) {
+	cfg := v1.ConfigurationData{}
+
+	if r.Error != nil {
+		return r.Code, r.Error.Error(), cfg
+	}
+
+	if len(r.Configuration) != 1 {
+		// internal result has been generated incorrectly
+		return ResultServerError, http.StatusText(ResultServerError), cfg
+	}
+
+	res := r.Configuration[0]
+	data := res.Data[0]
+
+	cfg.Configurations = make([]v1.ConfigurationItem, 1)
+	item := v1.ConfigurationItem{
+		ConfigurationItemID: res.ID,
+		Metric:              res.Metric,
+		HostID:              res.HostID,
+		Tags:                data.Tags,
+		Oncall:              data.Oncall,
+		Interval:            data.Interval,
+		Metadata: v1.ConfigurationMetaData{
+			Monitoring: data.Monitoring,
+			Team:       data.Team,
+			Source:     data.Source,
+			Targethost: data.Targethost,
+		},
+		Thresholds: []v1.ConfigurationThreshold{},
+	}
+
+	for _, thr := range data.Thresholds {
+		item.Thresholds = append(item.Thresholds, v1.ConfigurationThreshold{
+			Predicate: thr.Predicate,
+			Level:     thr.Level,
+			Value:     thr.Value,
+		})
+	}
+	cfg.Configurations[0] = item
+	return r.Code, ``, cfg
+}
+
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

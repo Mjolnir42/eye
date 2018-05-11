@@ -42,6 +42,23 @@ func (x *Rest) BasicAuth(h httprouter.Handle) httprouter.Handle {
 			return
 		}
 
+		// v1 API was unauthenticated
+		request := msg.New(r, ps)
+		if request.Version == msg.ProtocolOne {
+			// record fake authentication information
+			ps = append(ps, httprouter.Param{
+				Key:   `AuthenticatedUser`,
+				Value: `nobody`,
+			})
+			ps = append(ps, httprouter.Param{
+				Key:   `AuthenticatedToken`,
+				Value: `v1apirequest`,
+			})
+			// Delegate request to given handle
+			h(w, r, ps)
+			return
+		}
+
 		// Get credentials
 		auth := r.Header.Get("Authorization")
 		if strings.HasPrefix(auth, basicAuthPrefix) {
@@ -52,7 +69,6 @@ func (x *Rest) BasicAuth(h httprouter.Handle) httprouter.Handle {
 			if err == nil {
 				pair := bytes.SplitN(payload, []byte(":"), 2)
 				if len(pair) == 2 {
-					request := msg.New(r, ps)
 					request.Section = msg.SectionSupervisor
 					request.Action = msg.ActionAuthenticate
 					request.Super = msg.Supervisor{

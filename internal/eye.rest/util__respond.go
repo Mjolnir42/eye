@@ -49,6 +49,14 @@ func respondV1(w *http.ResponseWriter, r *msg.Result) {
 			}
 			sendV1Result(w, code, errstr, &bjson)
 			return
+		case msg.ActionShow:
+			code, errstr, data := r.ExportV1ConfigurationShow()
+			if bjson, err = json.Marshal(&data); err != nil {
+				hardInternalError(w)
+				return
+			}
+			sendV1Result(w, code, errstr, &bjson)
+			return
 		case msg.ActionRemove:
 			if r.Error != nil && r.Code >= msg.ResultServerError {
 				http.Error(*w, r.Error.Error(), http.StatusInternalServerError)

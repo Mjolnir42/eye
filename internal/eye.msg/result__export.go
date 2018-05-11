@@ -42,8 +42,13 @@ func (r *Result) ExportV1ConfigurationList() (uint16, string, v1.ConfigurationLi
 func (r *Result) ExportV1ConfigurationShow() (uint16, string, v1.ConfigurationData) {
 	cfg := v1.ConfigurationData{}
 
-	if r.Error != nil {
+	// v1 show results use status codes 200, 400, 404, 500
+	// v2 show results generate status codes 200, 400, 403, 404, 500
+	switch r.Code {
+	case ResultBadRequest, ResultNotFound, ResultServerError:
 		return r.Code, r.Error.Error(), cfg
+	case ResultForbidden:
+		return ResultServerError, r.Error.Error(), cfg
 	}
 
 	if len(r.Configuration) != 1 {
@@ -79,7 +84,7 @@ func (r *Result) ExportV1ConfigurationShow() (uint16, string, v1.ConfigurationDa
 		})
 	}
 	cfg.Configurations[0] = item
-	return r.Code, ``, cfg
+	return ResultOK, ``, cfg
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

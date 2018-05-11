@@ -78,7 +78,7 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 
 	cReq := v2.NewConfigurationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
-		replyBadRequest(&w, &request, err)
+		replyUnprocessableEntity(&w, &request, err)
 		return
 	}
 	request.Configuration = *cReq.Configuration

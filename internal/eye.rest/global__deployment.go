@@ -202,7 +202,7 @@ func (x *Rest) fetchPushDeployment(w *http.ResponseWriter, q *msg.Request) {
 		return
 	}
 	if err = json.Unmarshal(resp.Body(), &res); err != nil {
-		replyInternalError(w, q, err)
+		replyUnprocessableEntity(w, q, err)
 		return
 	}
 

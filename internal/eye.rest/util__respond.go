@@ -90,20 +90,26 @@ func respondV1(w *http.ResponseWriter, r *msg.Result) {
 		}
 
 	case msg.SectionDeployment:
-		// v1 Deployment API uses: 204, 410, 412, 422, 500
+		// v1 Deployment API uses: 204, 400,      410, 412, 422, 500
+		// v2 Deployment API uses:      400, 403, 410,      422, 500, 502, 504
 		// only failed requests return in SectionDeployment before being
 		// mapped to SectionConfiguration
 		switch r.Code {
-		case msg.ResultBadRequest, msg.ResultForbidden:
-			// v1 API has no 400/BadRequest or 403/Forbidden
+		case msg.ResultForbidden:
+			// v1 API has no 403/Forbidden
 			sendV1Result(w, msg.ResultServerError, r.Error.Error(), nil)
-		case msg.ResultUnprocessable, msg.ResultGone, msg.ResultServerError:
-			sendV1Result(w, r.Code, r.Error.Error(), nil)
+
 		case msg.ResultBadGateway, msg.ResultGatewayTimeout:
 			// v1 API uses 412/PreconditionFailed for connectivity
-			// errors to SOMA
+			// errors to SOMA which use 502/504 for the v2 API
 			sendV1Result(w, http.StatusPreconditionFailed, r.Error.Error(), nil)
+
+		case msg.ResultBadRequest, msg.ResultGone, msg.ResultUnprocessable, msg.ResultServerError:
+			// directly mapped v1:v2 result codes
+			sendV1Result(w, r.Code, r.Error.Error(), nil)
+
 		default:
+			// invalid unmapped result
 			hardInternalError(w)
 			return
 		}

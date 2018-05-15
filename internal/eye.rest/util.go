@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"reflect"
 	"runtime/debug"
 	"strconv"
@@ -272,6 +273,19 @@ func resolveFlags(rqProtocol *v2.Request, rqInternal *msg.Request) error {
 		return fmt.Errorf(`Invalid flag combination: alarm.clearing requires cache.invalidation`)
 	}
 	return nil
+}
+
+// foldSlashes collapses sequences of multiple consecutive / characters
+func foldSlashes(u *url.URL) {
+	o := u.RequestURI()
+
+	for u.Path = strings.Replace(
+		u.RequestURI(), `//`, `/`, -1,
+	); o != u.RequestURI(); u.Path = strings.Replace(
+		u.RequestURI(), `//`, `/`, -1,
+	) {
+		o = u.RequestURI()
+	}
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

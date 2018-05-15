@@ -21,7 +21,7 @@ import (
 	"github.com/go-resty/resty"
 	"github.com/julienschmidt/httprouter"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	somaproto "github.com/mjolnir42/soma/lib/proto"
+	"github.com/mjolnir42/soma/lib/proto"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -37,7 +37,7 @@ func (x *Rest) DeploymentNotification(w http.ResponseWriter, r *http.Request,
 	request.Action = msg.ActionNotification
 
 	// decode client payload
-	clientReq := somaproto.NewPushNotification()
+	clientReq := proto.NewPushNotification()
 	if err := decodeJSONBody(r, &clientReq); err != nil {
 		replyUnprocessableEntity(&w, &request, err)
 		return
@@ -87,7 +87,7 @@ func (x *Rest) DeploymentProcess(w http.ResponseWriter, r *http.Request,
 	request.Action = msg.ActionProcess
 
 	var err error
-	cReq := somaproto.NewDeploymentResult()
+	cReq := proto.NewDeploymentResult()
 	if err = decodeJSONBody(r, &cReq); err != nil {
 		replyUnprocessableEntity(&w, &request, err)
 		return
@@ -168,7 +168,7 @@ func (x *Rest) fetchPushDeployment(w *http.ResponseWriter, q *msg.Request) {
 	var (
 		client *resty.Client
 		resp   *resty.Response
-		res    somaproto.Result
+		res    proto.Result
 		err    error
 	)
 

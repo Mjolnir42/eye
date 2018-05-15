@@ -44,7 +44,7 @@ func (x *Rest) DeploymentNotification(w http.ResponseWriter, r *http.Request,
 
 	// validate client payload
 	govalidator.SetFieldsRequiredByDefault(true)
-	govalidator.TagMap["abspath"] = govalidator.Validator(func(str string) bool {
+	govalidator.TagMap[`abspath`] = govalidator.Validator(func(str string) bool {
 		return filepath.IsAbs(str)
 	})
 	if ok, err := govalidator.ValidateStruct(clientReq); !ok {

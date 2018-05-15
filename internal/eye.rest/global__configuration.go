@@ -16,6 +16,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
+	"github.com/mjolnir42/eye/lib/eye.proto/v1"
 	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 	uuid "github.com/satori/go.uuid"
 )
@@ -76,23 +77,40 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionAdd
 
-	cReq := v2.NewConfigurationRequest()
-	if err := decodeJSONBody(r, &cReq); err != nil {
-		replyUnprocessableEntity(&w, &request, err)
+	switch request.Version {
+	case msg.ProtocolOne:
+		cReq := &v1.ConfigurationItem{}
+		if err := decodeJSONBody(r, cReq); err != nil {
+			replyUnprocessableEntity(&w, &request, err)
+			return
+		}
+		request.Configuration = v2.ConfigurationFromV1(cReq)
+
+	case msg.ProtocolTwo:
+		cReq := v2.NewConfigurationRequest()
+		if err := decodeJSONBody(r, &cReq); err != nil {
+			replyUnprocessableEntity(&w, &request, err)
+			return
+		}
+		request.Configuration = *cReq.Configuration
+
+		// only the v2 API has request flags
+		if err := resolveFlags(&cReq, &request); err != nil {
+			replyBadRequest(&w, &request, err)
+			return
+		}
+
+	default:
+		replyInternalError(&w, &request, nil)
 		return
 	}
-	request.Configuration = *cReq.Configuration
+
 	request.Configuration.InputSanatize()
 	request.LookupHash = calculateLookupID(
 		request.Configuration.HostID,
 		request.Configuration.Metric,
 	)
 	request.Configuration.LookupID = request.LookupHash
-
-	if err := resolveFlags(&cReq, &request); err != nil {
-		replyBadRequest(&w, &request, err)
-		return
-	}
 
 	if !x.isAuthorized(&request) {
 		replyForbidden(&w, &request, nil)

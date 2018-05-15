@@ -80,6 +80,13 @@ func respondV1(w *http.ResponseWriter, r *msg.Result) {
 				// v1 API uses 204/NoContent
 				sendV1Result(w, msg.ResultNoContent, ``, nil)
 			case msg.ResultUnprocessable:
+				// not an error case on fallthrough: ignore
+
+				if r.Action == msg.ActionRemove {
+					// error case for Remove
+					hardInternalError(w)
+					return
+				}
 			default:
 				hardInternalError(w)
 				return

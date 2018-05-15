@@ -132,12 +132,34 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionUpdate
 
-	cReq := v2.NewConfigurationRequest()
-	if err := decodeJSONBody(r, &cReq); err != nil {
-		replyUnprocessableEntity(&w, &request, err)
+	switch request.Version {
+	case msg.ProtocolOne:
+		cReq := &v1.ConfigurationItem{}
+		if err := decodeJSONBody(r, cReq); err != nil {
+			replyUnprocessableEntity(&w, &request, err)
+			return
+		}
+		request.Configuration = v2.ConfigurationFromV1(cReq)
+
+	case msg.ProtocolTwo:
+		cReq := v2.NewConfigurationRequest()
+		if err := decodeJSONBody(r, &cReq); err != nil {
+			replyUnprocessableEntity(&w, &request, err)
+			return
+		}
+		request.Configuration = *cReq.Configuration
+
+		// only the v2 API has request flags
+		if err := resolveFlags(&cReq, &request); err != nil {
+			replyBadRequest(&w, &request, err)
+			return
+		}
+
+	default:
+		replyInternalError(&w, &request, nil)
 		return
 	}
-	request.Configuration = *cReq.Configuration
+
 	request.Configuration.InputSanatize()
 	request.LookupHash = calculateLookupID(
 		request.Configuration.HostID,
@@ -154,11 +176,6 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	}
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
-		replyBadRequest(&w, &request, err)
-		return
-	}
-
-	if err := resolveFlags(&cReq, &request); err != nil {
 		replyBadRequest(&w, &request, err)
 		return
 	}

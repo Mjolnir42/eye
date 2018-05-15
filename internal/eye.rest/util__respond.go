@@ -25,6 +25,8 @@ func respond(w *http.ResponseWriter, r *msg.Result) {
 		respondV1(w, r)
 	case msg.ProtocolTwo:
 		respondV2(w, r)
+	default:
+		panic(`API Protocol unknown`)
 	}
 }
 

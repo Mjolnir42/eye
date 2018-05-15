@@ -69,7 +69,7 @@ func (x *Rest) DeploymentNotification(w http.ResponseWriter, r *http.Request,
 	// build URL to send deployment feedback
 	request.Flags.SendDeploymentFeedback = true
 	soma, _ := url.Parse(x.conf.Eye.SomaURL)
-	soma.Path = fmt.Sprintf("/deployments/id/%s/{STATUS}", request.Notification.ID)
+	soma.Path = fmt.Sprintf("%s/%s/{STATUS}", request.Notification.PathPrefix, request.Notification.ID)
 	request.FeedbackURL = soma.String()
 
 	// request authorization for request

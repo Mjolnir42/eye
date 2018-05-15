@@ -8,6 +8,8 @@
 
 package v2 // import "github.com/mjolnir42/eye/lib/eye.proto/v2"
 
+import "github.com/mjolnir42/eye/lib/eye.proto/v1"
+
 // Configuration holds the monitoring profile definition for a check
 // that has to be performed
 type Configuration struct {
@@ -75,6 +77,39 @@ func (c *Configuration) InputSanatize() {
 		data.Info = MetaInformation{}
 		c.Data[i] = data
 	}
+}
+
+// ConfigurationFromV1 converts configuration data between protocol
+// versions v1 and v2
+func ConfigurationFromV1(item *v1.ConfigurationItem) Configuration {
+	cfg := Configuration{
+		HostID: item.HostID,
+		ID:     item.ConfigurationItemID,
+		Metric: item.Metric,
+	}
+	data := Data{
+		Interval:   item.Interval,
+		Monitoring: item.Metadata.Monitoring,
+		Oncall:     item.Oncall,
+		Source:     item.Metadata.Source,
+		Tags:       item.Tags,
+		Targethost: item.Metadata.Targethost,
+		Team:       item.Metadata.Team,
+	}
+
+	data.Thresholds = make([]Threshold, len(item.Thresholds))
+	for i, thr := range item.Thresholds {
+		data.Thresholds[i] = Threshold{
+			Predicate: thr.Predicate,
+			Level:     thr.Level,
+			Value:     thr.Value,
+		}
+	}
+
+	cfg.Data = []Data{
+		data,
+	}
+	return cfg
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

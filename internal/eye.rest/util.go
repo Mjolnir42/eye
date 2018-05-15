@@ -26,7 +26,7 @@ import (
 	"github.com/go-resty/resty"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
 	"github.com/mjolnir42/eye/lib/eye.proto/v2"
-	somaproto "github.com/mjolnir42/soma/lib/proto"
+	"github.com/mjolnir42/soma/lib/proto"
 )
 
 func panicCatcher(w http.ResponseWriter) {
@@ -42,8 +42,8 @@ func decodeJSONBody(r *http.Request, s interface{}) (err error) {
 	decoder := json.NewDecoder(r.Body)
 
 	switch s.(type) {
-	case *somaproto.PushNotification:
-		c := s.(*somaproto.PushNotification)
+	case *proto.PushNotification:
+		c := s.(*proto.PushNotification)
 		err = decoder.Decode(c)
 	default:
 		err = fmt.Errorf("decodeJSONBody: unhandled request type: %s", reflect.TypeOf(s))
@@ -66,7 +66,7 @@ func clearCamsAlarm(res *msg.Result) {
 
 // processDeploymentDetails creates an eye protocol configuration from
 // SOMA deployment details
-func processDeploymentDetails(details *somaproto.Deployment) (string, v2.Configuration, error) {
+func processDeploymentDetails(details *proto.Deployment) (string, v2.Configuration, error) {
 	lookupID := calculateLookupID(details.Node.AssetID, details.Metric.Path)
 
 	config := v2.Configuration{
@@ -144,7 +144,7 @@ func calculateLookupID(id uint64, metric string) string {
 
 // getServiceAttributeValue returns the value of the requested service
 // attribute or the empty string otherwise
-func getServiceAttributeValue(details *somaproto.Deployment, attribute string) string {
+func getServiceAttributeValue(details *proto.Deployment, attribute string) string {
 	if details.Service == nil {
 		return ``
 	}
@@ -160,7 +160,7 @@ func getServiceAttributeValue(details *somaproto.Deployment, attribute string) s
 }
 
 // getTargetHost returns the hostname of the deployment target
-func getTargetHost(details *somaproto.Deployment) string {
+func getTargetHost(details *proto.Deployment) string {
 	var fqdn, dnsZone string
 
 	// details.Properties contains only system properties which are

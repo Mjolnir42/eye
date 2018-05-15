@@ -189,10 +189,6 @@ func (x *Rest) fetchPushDeployment(w *http.ResponseWriter, q *msg.Request) {
 	foldSlashes(soma)
 	detailsDownload := soma.String()
 
-	// build URL to send deployment feedback
-	soma.Path = fmt.Sprintf("/deployments/id/%s/{STATUS}", q.Notification.ID.String())
-	q.FeedbackURL = soma.String()
-
 	// fetch DeploymentDetails
 	client = resty.New().SetTimeout(750 * time.Millisecond)
 	if resp, err = client.R().Get(detailsDownload); err != nil {

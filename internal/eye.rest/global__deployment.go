@@ -61,6 +61,11 @@ func (x *Rest) DeploymentNotification(w http.ResponseWriter, r *http.Request,
 		PathPrefix: clientReq.Path,
 	}
 
+	if uuid.Equal(request.Notification.ID, uuid.Nil) {
+		replyBadRequest(&w, &request, nil)
+		return
+	}
+
 	// build URL to send deployment feedback
 	request.Flags.SendDeploymentFeedback = true
 	soma, _ := url.Parse(x.conf.Eye.SomaURL)

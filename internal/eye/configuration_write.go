@@ -237,29 +237,30 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 // remove deletes a configuration from the database
 func (w *ConfigurationWrite) remove(q *msg.Request, mr *msg.Result) {
 	var (
-		err                                         error
-		tx                                          *sql.Tx
-		res                                         sql.Result
-		dataID, task, confResult                    string
-		tasks                                       []string
-		provisionTS, deprovisionTS, dbDeprovisionTS time.Time
-		validFrom, validUntil, dbValidUntil         time.Time
-		activatedAt                                 time.Time
-		configuration                               v2.Configuration
-		data                                        v2.Data
+		err                       error
+		tx                        *sql.Tx
+		res                       sql.Result
+		task                      string
+		transactionTS, validUntil time.Time
+		configuration             v2.Configuration
+		data                      v2.Data
 	)
+
+	transactionTS = time.Now().UTC()
 
 	// deprovision requests have a 15 minute grace window to send the
 	// new configuration data
-	deprovisionTS = time.Now().UTC()
 	task = msg.TaskDeprovision
-	validUntil = deprovisionTS.Add(15 * time.Minute)
+	validUntil = transactionTS.Add(15 * time.Minute)
+
+	// for final deletions, no 15 minute grace period for updates is
+	// required or granted
 	if q.ConfigurationTask == msg.TaskDelete {
-		// for final deletions, no 15 minute grace period for updates is
-		// required
-		validUntil = deprovisionTS
+		validUntil = transactionTS
 		task = msg.TaskDelete
 	}
+
+	// record that this request had the clearing flag set
 	if task == msg.TaskDeprovision && q.Flags.AlarmClearing {
 		task = msg.TaskClearing
 	}
@@ -270,81 +271,44 @@ func (w *ConfigurationWrite) remove(q *msg.Request, mr *msg.Result) {
 		return
 	}
 
-	// database index ensures there is no overlap in validity ranges
-	if err = tx.Stmt(w.stmtCfgSelectValidForUpdate).QueryRow(
-		q.Configuration.ID,
-	).Scan(
-		&dataID,
-		&validFrom,
-	); err == sql.ErrNoRows {
+	// check an active version of this configuration exists, then load
+	// it; this is required for requests with q.Flags.AlarmClearing set
+	// to true so that the OK event can be constructed with the correct
+	// metadata
+	if err = w.txCfgLoadActive(tx, q, &configuration); err == sql.ErrNoRows {
 		// that which does not exist can not be deleted
 		goto commitTx
 	} else if err != nil {
 		goto abort
 	}
 
-	// load full current configuration prior to invalidating it; this is
-	// required for requests with q.Flags.AlarmClearing set to true so
-	// that the OK event can be constructed with the correct metadata
-	if err = tx.Stmt(w.stmtCfgShow).QueryRow(
-		dataID,
-	).Scan(
-		&confResult,
-		&dbValidUntil,
-		&provisionTS,
-		&dbDeprovisionTS,
-		pq.Array(&tasks),
-	); err != nil {
-		// sql.ErrNoRows == row disappeared mid-transaction
-		goto abort
-	}
-	if err = json.Unmarshal([]byte(confResult), &configuration); err != nil {
-		goto abort
-	}
-
-	// query if this configurationID is activated
-	if err = tx.Stmt(w.stmtActivationGet).QueryRow(
-		q.Configuration.ID,
-	).Scan(
-		&activatedAt,
-	); err == sql.ErrNoRows {
-		configuration.ActivatedAt = `never`
-	} else if err != nil {
-		goto abort
-	} else {
-		configuration.ActivatedAt = activatedAt.Format(RFC3339Milli)
-	}
+	// XXX
+	data = configuration.Data[0]
 
 	// it is entirely possible that the configuration data is about to
-	// expire just as this transaction is running. If validUntil is not
-	// positive infinity then it is kept as is
-	if msg.PosTimeInf.Equal(dbValidUntil) {
-		validUntil = dbValidUntil
+	// expire just as this transaction is running. If the loaded validUntil is
+	// not positive infinity then it is kept as is since the
+	// configuration is already expiring
+	if !msg.PosTimeInf.Equal(v2.ParseValidity(data.Info.ValidUntil)) {
+		validUntil = v2.ParseValidity(data.Info.ValidUntil)
 	}
 
 	// if there is already an earlier deprovisioning timestamp it is left in
-	// place
-	if dbDeprovisionTS.Before(deprovisionTS) {
-		deprovisionTS = dbDeprovisionTS
+	// place and backdate this transaction
+	if v2.ParseProvision(data.Info.DeprovisionedAt).Before(transactionTS) {
+		transactionTS = v2.ParseProvision(data.Info.DeprovisionedAt)
 	}
+	data.Info.ValidUntil = v2.FormatValidity(validUntil)
+	data.Info.DeprovisionedAt = v2.FormatProvision(transactionTS)
+	configuration.Data[0] = data
 
-	// populate result metadata
-	data = configuration.Data[0]
-	data.Info = v2.MetaInformation{
-		ValidFrom:       validFrom.Format(RFC3339Milli),
-		ValidUntil:      validUntil.Format(RFC3339Milli),
-		ProvisionedAt:   provisionTS.Format(RFC3339Milli),
-		DeprovisionedAt: deprovisionTS.Format(RFC3339Milli),
-		Tasks:           tasks,
-	}
-	configuration.Data = []v2.Data{data}
 	mr.Configuration = append(mr.Configuration, configuration)
 
 	// invalidate current configuration data
 	if res, err = tx.Stmt(w.stmtCfgDataUpdateValidity).Exec(
-		validFrom.Format(RFC3339Milli),
-		validUntil.Format(RFC3339Milli),
-		dataID,
+		v2.ParseValidity(data.Info.ValidFrom),
+		v2.ParseValidity(data.Info.ValidUntil),
+		data.ID,
 	); err != nil {
 		goto abort
 	}
@@ -354,8 +318,8 @@ func (w *ConfigurationWrite) remove(q *msg.Request, mr *msg.Result) {
 
 	// update provisioning record
 	if res, err = tx.Stmt(w.stmtProvFinalize).Exec(
-		dataID,
-		deprovisionTS.Format(RFC3339Milli),
+		data.ID,
+		transactionTS.Format(RFC3339Milli),
 		task,
 	); err != nil {
 		goto abort

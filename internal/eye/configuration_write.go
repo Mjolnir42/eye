@@ -238,6 +238,7 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 func (w *ConfigurationWrite) remove(q *msg.Request, mr *msg.Result) {
 	var (
 		err                       error
+		ok                        bool
 		tx                        *sql.Tx
 		res                       sql.Result
 		task                      string
@@ -304,15 +305,14 @@ func (w *ConfigurationWrite) remove(q *msg.Request, mr *msg.Result) {
 
 	mr.Configuration = append(mr.Configuration, configuration)
 
-	// invalidate current configuration data
-	if res, err = tx.Stmt(w.stmtCfgDataUpdateValidity).Exec(
+	// update validity records within the database
+	if ok, err = w.txSetDataValidity(tx, mr,
 		v2.ParseValidity(data.Info.ValidFrom),
 		v2.ParseValidity(data.Info.ValidUntil),
 		data.ID,
 	); err != nil {
 		goto abort
-	}
-	if !mr.ExpectedRows(&res, 1) {
+	} else if !ok {
 		goto rollback
 	}
 

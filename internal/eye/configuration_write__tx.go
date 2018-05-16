@@ -110,4 +110,26 @@ func (w *ConfigurationWrite) txCfgLoadActive(tx *sql.Tx, q *msg.Request,
 	return
 }
 
+// txSetDataValidity updates the the validity of dataID
+func (w *ConfigurationWrite) txSetDataValidity(tx *sql.Tx, mr *msg.Result,
+	from, until time.Time, dataID string) (ok bool, err error) {
+
+	var res sql.Result
+	ok = true
+
+	if res, err = tx.Stmt(w.stmtCfgDataUpdateValidity).Exec(
+		from,
+		until,
+		dataID,
+	); err != nil {
+		ok = false
+		return
+	}
+	if !mr.ExpectedRows(&res, 1) {
+		ok = false
+		return
+	}
+	return
+}
+
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

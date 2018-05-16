@@ -132,4 +132,26 @@ func (w *ConfigurationWrite) txSetDataValidity(tx *sql.Tx, mr *msg.Result,
 	return
 }
 
+// txFinalizeProvision closes the provisioning period
+func (w *ConfigurationWrite) txFinalizeProvision(tx *sql.Tx, mr *msg.Result,
+	until time.Time, dataID, task string) (ok bool, err error) {
+
+	var res sql.Result
+	ok = true
+
+	if res, err = tx.Stmt(w.stmtProvFinalize).Exec(
+		dataID,
+		until,
+		task,
+	); err != nil {
+		ok = false
+		return
+	}
+	if !mr.ExpectedRows(&res, 1) {
+		ok = false
+		return
+	}
+	return
+}
+
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

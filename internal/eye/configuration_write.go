@@ -317,14 +317,13 @@ func (w *ConfigurationWrite) remove(q *msg.Request, mr *msg.Result) {
 	}
 
 	// update provisioning record
-	if res, err = tx.Stmt(w.stmtProvFinalize).Exec(
+	if ok, err = w.txFinalizeProvision(tx, mr,
+		transactionTS,
 		data.ID,
-		transactionTS.Format(RFC3339Milli),
 		task,
 	); err != nil {
 		goto abort
-	}
-	if !mr.ExpectedRows(&res, 1) {
+	} else if !ok {
 		goto rollback
 	}
 

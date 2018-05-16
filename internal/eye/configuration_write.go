@@ -78,14 +78,16 @@ func (w *ConfigurationWrite) process(q *msg.Request) {
 // add inserts a configuration profile into the database
 func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 	var (
-		err                               error
-		tx                                *sql.Tx
-		jsonb                             []byte
-		res                               sql.Result
-		dataID, previousDataID            string
-		data                              v2.Data
-		rolloutTS, validFrom, activatedAt time.Time
-		skipInvalidatePrevious            bool
+		err                    error
+		ok                     bool
+		tx                     *sql.Tx
+		jsonb                  []byte
+		res                    sql.Result
+		dataID                 string
+		data                   v2.Data
+		rolloutTS, activatedAt time.Time
+		skipInvalidatePrevious bool
+		previous               v2.Configuration
 	)
 
 	// fully populate Configuration before JSON encoding it
@@ -132,28 +134,31 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 		goto rollback
 	}
 
-	// database index ensures there is no overlap in validity ranges
-	if err = tx.Stmt(w.stmtCfgSelectValidForUpdate).QueryRow(
-		q.Configuration.ID,
-	).Scan(
-		&previousDataID,
-		&validFrom,
-	); err == sql.ErrNoRows {
-		// no still valid data is a non-error state
+	// since SOMA sends deprovision+rollout instead of update requests
+	// so downstream consumers can be stateless, this creates a gap
+	// between deprovision and rollout where an eye client could cache
+	// the incorrect information that there is no configuration.
+	// To bridge this gap, ConfigurationWrite.remove invalidates
+	// configurations 15 minutes into the future.
+	// For this reason there could be a (still valid) previous
+	// configuration.
+	if err = w.txCfgLoadActive(tx, q, &previous); err == sql.ErrNoRows {
+		// no still valid data is a non-error state, the 15minutes could
+		// have expired or this is the first rollout
 		skipInvalidatePrevious = true
 	} else if err != nil {
 		goto abort
 	}
 
+	// update validity data for previous configuration if found
 	if !skipInvalidatePrevious {
-		if res, err = tx.Stmt(w.stmtCfgDataUpdateValidity).Exec(
-			validFrom.Format(RFC3339Milli),
-			rolloutTS.Format(RFC3339Milli),
-			previousDataID,
+		if ok, err = w.txSetDataValidity(tx, mr,
+			v2.ParseValidity(previous.Data[0].Info.ValidFrom),
+			rolloutTS,
+			previous.Data[0].ID,
 		); err != nil {
 			goto abort
-		}
-		if !mr.ExpectedRows(&res, 1) {
+		} else if !ok {
 			goto rollback
 		}
 	}

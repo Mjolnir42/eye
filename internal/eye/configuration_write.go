@@ -115,13 +115,10 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 		int(q.Configuration.HostID),
 		q.Configuration.Metric,
 	); err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
+		goto abort
 	}
 	if !mr.ExpectedRows(&res, 0, 1) {
-		tx.Rollback()
-		return
+		goto rollback
 	}
 
 	// Register configurationID with its lookup hash
@@ -129,13 +126,10 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 		q.Configuration.ID,
 		q.LookupHash,
 	); err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
+		goto abort
 	}
 	if !mr.ExpectedRows(&res, 0, 1) {
-		tx.Rollback()
-		return
+		goto rollback
 	}
 
 	// database index ensures there is no overlap in validity ranges
@@ -148,9 +142,7 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 		// no still valid data is a non-error state
 		skipInvalidatePrevious = true
 	} else if err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
+		goto abort
 	}
 
 	if !skipInvalidatePrevious {
@@ -159,13 +151,10 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 			rolloutTS.Format(RFC3339Milli),
 			previousDataID,
 		); err != nil {
-			mr.ServerError(err)
-			tx.Rollback()
-			return
+			goto abort
 		}
 		if !mr.ExpectedRows(&res, 1) {
-			tx.Rollback()
-			return
+			goto rollback
 		}
 	}
 
@@ -176,13 +165,10 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 		rolloutTS.Format(RFC3339Milli),
 		jsonb,
 	); err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
+		goto abort
 	}
 	if !mr.ExpectedRows(&res, 1) {
-		tx.Rollback()
-		return
+		goto rollback
 	}
 
 	// record provision request
@@ -192,13 +178,10 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 		rolloutTS.Format(RFC3339Milli),
 		pq.Array([]string{msg.TaskRollout}),
 	); err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
+		goto abort
 	}
 	if !mr.ExpectedRows(&res, 1) {
-		tx.Rollback()
-		return
+		goto rollback
 	}
 
 	// query if this configurationID is activated
@@ -209,9 +192,7 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 	); err == sql.ErrNoRows {
 		q.Configuration.ActivatedAt = `never`
 	} else if err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
+		goto abort
 	} else {
 		q.Configuration.ActivatedAt = activatedAt.Format(RFC3339Milli)
 	}
@@ -232,6 +213,13 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 	q.Configuration.Data = []v2.Data{data}
 	mr.Configuration = append(mr.Configuration, q.Configuration)
 	mr.OK()
+	return
+
+abort:
+	mr.ServerError(err)
+
+rollback:
+	tx.Rollback()
 }
 
 // remove deletes a configuration from the database

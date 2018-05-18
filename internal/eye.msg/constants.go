@@ -41,6 +41,7 @@ const (
 	TaskDeprovision      = `deprovision`
 	TaskPending          = `pending`
 	TaskRollout          = `rollout`
+	TaskUpdate           = `update`
 )
 
 // Actions for the various permission sections

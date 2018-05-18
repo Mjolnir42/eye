@@ -110,6 +110,30 @@ func (w *ConfigurationWrite) txCfgLoadActive(tx *sql.Tx, q *msg.Request,
 	return
 }
 
+// txInsertCfgData adds data for configurationID and starts a
+// provisioning period
+func (w *ConfigurationWrite) txInsertCfgData(tx *sql.Tx, mr *msg.Result,
+	dataID, configurationID string, from time.Time, data []byte) (ok bool, err error) {
+
+	var res sql.Result
+
+	if res, err = tx.Stmt(w.stmtCfgAddData).Exec(
+		dataID,
+		configurationID,
+		from,
+		data,
+	); err != nil {
+		ok = false
+		return
+	}
+	if !mr.ExpectedRows(&res, 1) {
+		ok = false
+		return
+	}
+	ok, err = w.txStartProvision(tx, mr, from, dataID, configurationID)
+	return
+}
+
 // txSetDataValidity updates the the validity of dataID
 func (w *ConfigurationWrite) txSetDataValidity(tx *sql.Tx, mr *msg.Result,
 	from, until time.Time, dataID string) (ok bool, err error) {

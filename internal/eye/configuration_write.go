@@ -163,23 +163,12 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 	}
 
 	// insert configuration data as valid from rolloutTS to infinity
-	if res, err = tx.Stmt(w.stmtCfgAddData).Exec(
+	// and record provision request
+	if ok, err = w.txInsertCfgData(tx, mr,
 		dataID,
 		q.Configuration.ID,
-		rolloutTS.Format(RFC3339Milli),
-		jsonb,
-	); err != nil {
-		goto abort
-	}
-	if !mr.ExpectedRows(&res, 1) {
-		goto rollback
-	}
-
-	// record provision request
-	if ok, err = w.txStartProvision(tx, mr,
 		rolloutTS,
-		dataID,
-		q.Configuration.ID,
+		jsonb,
 	); err != nil {
 		goto abort
 	} else if !ok {

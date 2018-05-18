@@ -207,7 +207,7 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 	// generate full reply
 	data.Info = v2.MetaInformation{
 		ValidFrom:       rolloutTS.Format(RFC3339Milli),
-		ValidUntil:      `infinity`,
+		ValidUntil:      `forever`,
 		ProvisionedAt:   rolloutTS.Format(RFC3339Milli),
 		DeprovisionedAt: `never`,
 		Tasks:           []string{msg.TaskRollout},

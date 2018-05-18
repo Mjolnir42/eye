@@ -132,7 +132,30 @@ func (w *ConfigurationWrite) txSetDataValidity(tx *sql.Tx, mr *msg.Result,
 	return
 }
 
-// txFinalizeProvision closes the provisioning period
+// txStartProvision starts a provisioning period for dataID
+func (w *ConfigurationWrite) txStartProvision(tx *sql.Tx, mr *msg.Result,
+	from time.Time, dataID, configurationID string) (ok bool, err error) {
+
+	var res sql.Result
+	ok = true
+
+	if res, err = tx.Stmt(w.stmtProvAdd).Exec(
+		dataID,
+		configurationID,
+		from,
+		pq.Array([]string{msg.TaskRollout}),
+	); err != nil {
+		ok = false
+		return
+	}
+	if !mr.ExpectedRows(&res, 1) {
+		ok = false
+		return
+	}
+	return
+}
+
+// txFinalizeProvision closes the provisioning period for dataID
 func (w *ConfigurationWrite) txFinalizeProvision(tx *sql.Tx, mr *msg.Result,
 	until time.Time, dataID, task string) (ok bool, err error) {
 

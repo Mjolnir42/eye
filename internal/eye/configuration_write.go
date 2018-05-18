@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/lib/pq"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
 	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 	uuid "github.com/satori/go.uuid"
@@ -177,15 +176,13 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 	}
 
 	// record provision request
-	if _, err = tx.Stmt(w.stmtProvAdd).Exec(
+	if ok, err = w.txStartProvision(tx, mr,
+		rolloutTS,
 		dataID,
 		q.Configuration.ID,
-		rolloutTS.Format(RFC3339Milli),
-		pq.Array([]string{msg.TaskRollout}),
 	); err != nil {
 		goto abort
-	}
-	if !mr.ExpectedRows(&res, 1) {
+	} else if !ok {
 		goto rollback
 	}
 

@@ -12,7 +12,6 @@ package eye // import "github.com/mjolnir42/eye/internal/eye"
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -333,46 +332,120 @@ rollback:
 	tx.Rollback()
 }
 
-// update replaces a configuration
+// update replaces a configuration's data section with a new version
 func (w *ConfigurationWrite) update(q *msg.Request, mr *msg.Result) {
 	var (
-		err   error
-		tx    *sql.Tx
-		jsonb []byte
-		res   sql.Result
+		err error
+		tx  *sql.Tx
+		ok  bool
+
+		jsonb          []byte
+		transactionTS  time.Time
+		prevCfg        v2.Configuration
+		data, prevData v2.Data
 	)
 
-	if jsonb, err = json.Marshal(q.Configuration); err != nil {
-		mr.ServerError(err)
-		return
-	}
+	transactionTS = time.Now().UTC()
 
 	if tx, err = w.conn.Begin(); err != nil {
 		mr.ServerError(err)
 		return
 	}
 
-	if res, err = tx.Stmt(w.stmtConfigurationUpdate).Exec(
-		q.Configuration.ID,
-		q.LookupHash,
-		jsonb,
-	); err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
-	}
-	// statement should affect 1 row
-	if count, _ := res.RowsAffected(); count != 1 {
-		mr.ServerError(fmt.Errorf("Rollback: update statement affected %d rows", count))
-		tx.Rollback()
-		return
+	// load the current configuration. for Update requests, there must
+	// be currently valid data that is being updated
+	if err = w.txCfgLoadActive(tx, q, &prevCfg); err == sql.ErrNoRows {
+		// that which does not exist can not be updated
+		mr.NotFound(err)
+		goto rollback
+	} else if err != nil {
+		goto abort
 	}
 
+	// update current data
+	prevData = prevCfg.Data[0]
+
+	// update validity of current data
+	prevData.Info.ValidUntil = v2.FormatValidity(transactionTS)
+	if ok, err = w.txSetDataValidity(tx, mr,
+		v2.ParseValidity(prevData.Info.ValidFrom),
+		transactionTS,
+		prevData.ID,
+	); err != nil {
+		goto abort
+	} else if !ok {
+		goto rollback
+	}
+
+	// update provisioning history of current data
+	prevData.Info.DeprovisionedAt = v2.FormatProvision(transactionTS)
+	if ok, err = w.txFinalizeProvision(tx, mr,
+		transactionTS,
+		prevData.ID,
+		msg.TaskUpdate,
+	); err != nil {
+		goto abort
+	} else if !ok {
+		goto rollback
+	}
+
+	// insert new data
+	// always stored with ActivatedAt set to unknown inside the stored JSON
+	q.Configuration.ActivatedAt = `unknown`
+
+	data = q.Configuration.Data[0]
+	data.ID = uuid.Must(uuid.NewV4()).String()
+	data.Info = v2.MetaInformation{}
+	q.Configuration.Data = []v2.Data{data}
+
+	if jsonb, err = json.Marshal(q.Configuration); err != nil {
+		goto abort
+	}
+
+	// insert configuration data as valid from transactionTS to infinity
+	// and record provision request
+	if ok, err = w.txInsertCfgData(tx, mr,
+		data.ID,
+		q.Configuration.ID,
+		transactionTS,
+		jsonb,
+	); err != nil {
+		goto abort
+	} else if !ok {
+		goto rollback
+	}
+
+	// commit transaction
 	if err = tx.Commit(); err != nil {
 		mr.ServerError(err)
 		return
 	}
+
+	// generate full reply
+	data.Info = v2.MetaInformation{
+		ValidFrom:       v2.FormatValidity(transactionTS),
+		ValidUntil:      `forever`,
+		ProvisionedAt:   v2.FormatValidity(transactionTS),
+		DeprovisionedAt: `never`,
+		Tasks:           []string{msg.TaskRollout},
+	}
+
+	// prevCfg has the populated ActivatedAt field
+	prevCfg.Data = []v2.Data{
+		data,
+		prevData,
+	}
+	mr.Configuration = append(mr.Configuration, prevCfg)
+
 	mr.OK()
+	return
+
+abort:
+	mr.ServerError(err)
+
+rollback:
+	tx.Rollback()
+	return
 }
 
 // activate records a configuration activation

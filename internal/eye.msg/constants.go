@@ -36,11 +36,11 @@ const (
 	SectionDeployment    = `deployment`
 	SectionLookup        = `lookup`
 	SectionRegistration  = `registration`
+	TaskClearing         = `clearing`
 	TaskDelete           = `delete`
 	TaskDeprovision      = `deprovision`
 	TaskPending          = `pending`
 	TaskRollout          = `rollout`
-	TaskClearing         = `clearing`
 )
 
 // Actions for the various permission sections

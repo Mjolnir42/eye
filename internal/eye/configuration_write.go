@@ -92,7 +92,6 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 	// fully populate Configuration before JSON encoding it
 	rolloutTS = time.Now().UTC()
 	dataID = uuid.Must(uuid.NewV4()).String()
-	q.Configuration.LookupID = q.LookupHash
 	q.Configuration.ActivatedAt = `unknown`
 
 	data = q.Configuration.Data[0]

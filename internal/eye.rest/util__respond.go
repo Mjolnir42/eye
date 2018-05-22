@@ -89,6 +89,9 @@ func respondV1(w *http.ResponseWriter, r *msg.Result) {
 			case msg.ResultForbidden:
 				// v1 API has no 403/Forbidden
 				sendV1Result(w, msg.ResultBadRequest, r.Error.Error(), nil)
+			case msg.ResultNotImplemented:
+				// v1 API has no 501/NotImplemented
+				sendV1Result(w, msg.ResultServerError, r.Error.Error(), nil)
 			case msg.ResultOK:
 				// v1 API uses 204/NoContent
 				sendV1Result(w, msg.ResultNoContent, ``, nil)
@@ -111,12 +114,12 @@ func respondV1(w *http.ResponseWriter, r *msg.Result) {
 
 	case msg.SectionDeployment:
 		// v1 Deployment API uses: 204, 400,      410, 412, 422, 500
-		// v2 Deployment API uses:      400, 403, 410,      422, 500, 502, 504
+		// v2 Deployment API uses:      400, 403, 410,      422, 500, 501, 502, 504
 		// only failed requests return in SectionDeployment before being
 		// mapped to SectionConfiguration
 		switch r.Code {
-		case msg.ResultForbidden:
-			// v1 API has no 403/Forbidden
+		case msg.ResultForbidden, msg.ResultNotImplemented:
+			// v1 API has no 403/Forbidden or 501/NotImplemented
 			sendV1Result(w, msg.ResultServerError, r.Error.Error(), nil)
 
 		case msg.ResultBadGateway, msg.ResultGatewayTimeout:

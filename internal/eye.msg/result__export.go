@@ -87,4 +87,56 @@ func (r *Result) ExportV1ConfigurationShow() (uint16, string, v1.ConfigurationDa
 	return ResultOK, ``, cfg
 }
 
+// ExportV1LookupCfg generates a protocol version 1 lookup result
+func (r *Result) ExportV1LookupCfg() (uint16, string, v1.ConfigurationData) {
+	cfg := v1.ConfigurationData{}
+
+	// v1 lookup results use status codes 200, 400,      404, 500
+	// v2 lookup results use status codes 200, 400, 403, 404, 500, 501
+	switch r.Code {
+	case ResultBadRequest, ResultNotFound, ResultServerError:
+		return r.Code, r.Error.Error(), cfg
+	case ResultForbidden:
+		return ResultServerError, r.Error.Error(), cfg
+	case ResultNotImplemented:
+		return ResultServerError, r.Error.Error(), cfg
+	}
+
+	cfg.Configurations = make(
+		[]v1.ConfigurationItem,
+		len(r.Configuration),
+	)
+
+	for idx, res := range r.Configuration {
+		data := res.Data[0]
+
+		item := v1.ConfigurationItem{
+			ConfigurationItemID: res.ID,
+			Metric:              res.Metric,
+			HostID:              res.HostID,
+			Tags:                data.Tags,
+			Oncall:              data.Oncall,
+			Interval:            data.Interval,
+			Metadata: v1.ConfigurationMetaData{
+				Monitoring: data.Monitoring,
+				Team:       data.Team,
+				Source:     data.Source,
+				Targethost: data.Targethost,
+			},
+			Thresholds: []v1.ConfigurationThreshold{},
+		}
+		for _, thr := range data.Thresholds {
+			item.Thresholds = append(item.Thresholds, v1.ConfigurationThreshold{
+				Predicate: thr.Predicate,
+				Level:     thr.Level,
+				Value:     thr.Value,
+			})
+		}
+
+		cfg.Configurations[idx] = item
+	}
+
+	return ResultOK, ``, cfg
+}
+
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

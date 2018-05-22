@@ -42,9 +42,22 @@ func respondV1(w *http.ResponseWriter, r *msg.Result) {
 	switch r.Section {
 	case msg.SectionRegistration:
 		panic(`API Protocol 1 does not have registrations`)
-	}
 
-	switch r.Section {
+	case msg.SectionLookup:
+		switch r.Action {
+		case msg.ActionConfiguration:
+			code, errstr, data := r.ExportV1LookupCfg()
+			if bjson, err = json.Marshal(&data); err != nil {
+				hardInternalError(w)
+				return
+			}
+			sendV1Result(w, code, errstr, &bjson)
+
+		default:
+			hardInternalError(w)
+			return
+		}
+
 	case msg.SectionConfiguration:
 		switch r.Action {
 		case msg.ActionList:

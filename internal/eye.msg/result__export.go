@@ -19,8 +19,8 @@ func (r *Result) ExportV1ConfigurationList() (uint16, string, v1.ConfigurationLi
 	list := v1.ConfigurationList{}
 
 	// v1 list results use status codes 200, 404, 500
-	// v2 list results generate status codes 200, 403, 500
-	// this function maps 403 to 500 and generates 404 for empty 200
+	// v2 list results generate status codes 200, 403, 500, 501
+	// this function maps 403+501 to 500 and generates 404 for empty 200
 	// results
 	if r.Error != nil {
 		return ResultServerError, r.Error.Error(), list
@@ -43,11 +43,11 @@ func (r *Result) ExportV1ConfigurationShow() (uint16, string, v1.ConfigurationDa
 	cfg := v1.ConfigurationData{}
 
 	// v1 show results use status codes 200, 400, 404, 500
-	// v2 show results generate status codes 200, 400, 403, 404, 500
+	// v2 show results generate status codes 200, 400, 403, 404, 500, 501
 	switch r.Code {
 	case ResultBadRequest, ResultNotFound, ResultServerError:
 		return r.Code, r.Error.Error(), cfg
-	case ResultForbidden:
+	case ResultForbidden, ResultNotImplemented:
 		return ResultServerError, r.Error.Error(), cfg
 	}
 
@@ -96,9 +96,7 @@ func (r *Result) ExportV1LookupCfg() (uint16, string, v1.ConfigurationData) {
 	switch r.Code {
 	case ResultBadRequest, ResultNotFound, ResultServerError:
 		return r.Code, r.Error.Error(), cfg
-	case ResultForbidden:
-		return ResultServerError, r.Error.Error(), cfg
-	case ResultNotImplemented:
+	case ResultForbidden, ResultNotImplemented:
 		return ResultServerError, r.Error.Error(), cfg
 	}
 

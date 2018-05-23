@@ -51,6 +51,7 @@ const (
 	ActionAuthenticate  = `authenticate`
 	ActionAuthorize     = `authorize`
 	ActionConfiguration = `configuration`
+	ActionHistory       = `history`
 	ActionList          = `list`
 	ActionNop           = `nop`
 	ActionNotification  = `notification`

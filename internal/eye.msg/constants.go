@@ -60,6 +60,7 @@ const (
 	ActionSearch        = `search`
 	ActionShow          = `show`
 	ActionUpdate        = `update`
+	ActionVersion       = `version`
 )
 
 // Result codes

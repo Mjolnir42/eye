@@ -32,7 +32,7 @@ func (w *DeploymentWrite) Run() {
 	var err error
 
 	for statement, prepStmt := range map[string]*sql.Stmt{
-		stmt.ConfigurationExists: w.stmtConfigExists,
+		stmt.CfgExists: w.stmtExists,
 	} {
 		if prepStmt, err = w.conn.Prepare(statement); err != nil {
 			w.errLog.Fatal(`deployment`, err, stmt.Name(statement))

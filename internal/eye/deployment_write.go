@@ -19,13 +19,13 @@ import (
 
 // DeploymentWrite handles deployment requests
 type DeploymentWrite struct {
-	Input            chan msg.Request
-	Shutdown         chan struct{}
-	conn             *sql.DB
-	stmtConfigExists *sql.Stmt
-	appLog           *logrus.Logger
-	reqLog           *logrus.Logger
-	errLog           *logrus.Logger
+	Input      chan msg.Request
+	Shutdown   chan struct{}
+	conn       *sql.DB
+	stmtExists *sql.Stmt
+	appLog     *logrus.Logger
+	reqLog     *logrus.Logger
+	errLog     *logrus.Logger
 }
 
 // newDeploymentWrite return a new DeploymentWrite handler with input buffer of length
@@ -59,7 +59,7 @@ func (w *DeploymentWrite) notification(q *msg.Request, mr *msg.Result) {
 	var err error
 	var configurationID string
 
-	if err = w.stmtConfigExists.QueryRow(
+	if err = w.stmtExists.QueryRow(
 		q.Configuration.ID,
 	).Scan(
 		&configurationID,

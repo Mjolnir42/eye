@@ -18,7 +18,7 @@ SELECT configurationID
 FROM   eye.configurations_data
 WHERE  validity @> NOW()::timestamptz;`
 
-	ConfigurationExists = `
+	CfgExists = `
 SELECT configurationID
 FROM   eye.configurations
 WHERE  configurationID = $1::uuid;`
@@ -98,13 +98,13 @@ WHERE  configurationID = $1::uuid;`
 )
 
 func init() {
-	m[ConfigurationExists] = `ConfigurationExists`
 	m[ConfigurationUpdate] = `ConfigurationUpdate`
 
 	m[CfgAddData] = `CfgAddData`
 	m[CfgAddID] = `CfgAddID`
 	m[CfgDataHistory] = `CfgDataHistory`
 	m[CfgDataUpdateValidity] = `CfgDataUpdateValidity`
+	m[CfgExists] = `CfgExists`
 	m[CfgList] = `CfgList`
 	m[CfgSelectValidForUpdate] = `CfgSelectValidForUpdate`
 	m[CfgSelectValid] = `CfgSelectValid`

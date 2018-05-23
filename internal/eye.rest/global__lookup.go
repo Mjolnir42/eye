@@ -46,4 +46,27 @@ func (x *Rest) LookupConfiguration(w http.ResponseWriter, r *http.Request,
 	respond(&w, &result)
 }
 
+// LookupRegistration accepts lookup requests for all registrations of a
+// specific application. Internally this is mapped as a special case on
+// top of RegistrationSearch.
+func (x *Rest) LookupRegistration(w http.ResponseWriter, r *http.Request,
+	params httprouter.Params) {
+	defer panicCatcher(w)
+
+	request := msg.New(r, params)
+	request.Section = msg.SectionLookup
+	request.Action = msg.ActionRegistration
+	request.Search.Registration.Application = params.ByName(`application`)
+
+	if !x.isAuthorized(&request) {
+		replyForbidden(&w, &request, nil)
+		return
+	}
+
+	handler := x.handlerMap.Get(`registration_r`)
+	handler.Intake() <- request
+	result := <-request.Reply
+	respond(&w, &result)
+}
+
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

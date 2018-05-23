@@ -47,7 +47,7 @@ func (r *RegistrationRead) process(q *msg.Request) {
 		r.list(q, &result)
 	case msg.ActionShow:
 		r.show(q, &result)
-	case msg.ActionSearch:
+	case msg.ActionSearch, msg.ActionRegistration:
 		r.search(q, &result)
 	default:
 		result.UnknownRequest(q)

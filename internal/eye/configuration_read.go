@@ -96,7 +96,7 @@ func (r *ConfigurationRead) list(q *msg.Request, mr *msg.Result) {
 	mr.OK()
 }
 
-// show returns a specific configuration
+// show returns the current version of a specific configuration
 func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
 	var (
 		err                                     error
@@ -117,9 +117,7 @@ func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
 
 	// mark transaction read-only
 	if _, err = tx.Exec(stmt.ReadOnlyTransaction); err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
+		goto abort
 	}
 
 	// get currently valid dataID
@@ -130,12 +128,9 @@ func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
 		&validFrom,
 	); err == sql.ErrNoRows {
 		mr.NotFound(err)
-		tx.Rollback()
-		return
+		goto rollback
 	} else if err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
+		goto abort
 	}
 
 	// read queried dataID
@@ -149,19 +144,14 @@ func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
 		pq.Array(&tasks),
 	); err == sql.ErrNoRows {
 		mr.NotFound(err)
-		tx.Rollback()
-		return
+		goto rollback
 	} else if err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
+		goto abort
 	}
 
 	// unmarshal JSON stored within the database
 	if err = json.Unmarshal([]byte(confResult), &configuration); err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
+		goto abort
 	}
 
 	// query if this configurationID is activated
@@ -172,9 +162,7 @@ func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
 	); err == sql.ErrNoRows {
 		configuration.ActivatedAt = `never`
 	} else if err != nil {
-		mr.ServerError(err)
-		tx.Rollback()
-		return
+		goto abort
 	} else {
 		configuration.ActivatedAt = activatedAt.Format(RFC3339Milli)
 	}
@@ -182,20 +170,12 @@ func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
 	// populate result metadata
 	data = configuration.Data[0]
 	data.Info = v2.MetaInformation{
-		ValidFrom:     validFrom.Format(RFC3339Milli),
-		ProvisionedAt: provisionTS.Format(RFC3339Milli),
+		ValidFrom:       v2.FormatValidity(validFrom),
+		ValidUntil:      v2.FormatValidity(validUntil),
+		ProvisionedAt:   v2.FormatProvision(provisionTS),
+		DeprovisionedAt: v2.FormatProvision(deprovisionTS),
+		Tasks:           tasks,
 	}
-	if msg.PosTimeInf.Equal(deprovisionTS) {
-		data.Info.DeprovisionedAt = `never`
-	} else {
-		data.Info.DeprovisionedAt = deprovisionTS.Format(RFC3339Milli)
-	}
-	if msg.PosTimeInf.Equal(validUntil) {
-		data.Info.ValidUntil = `infinity`
-	} else {
-		data.Info.ValidUntil = validUntil.Format(RFC3339Milli)
-	}
-	data.Info.Tasks = append(data.Info.Tasks, tasks...)
 	configuration.Data = []v2.Data{data}
 	mr.Configuration = append(mr.Configuration, configuration)
 
@@ -204,6 +184,14 @@ func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
 		return
 	}
 	mr.OK()
+	return
+
+abort:
+	mr.ServerError(err)
+
+rollback:
+	tx.Rollback()
+	return
 }
 
 // history returns the full data history for a configuration

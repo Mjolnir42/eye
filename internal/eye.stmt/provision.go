@@ -41,11 +41,19 @@ SET    provision_period = tstzrange(( SELECT lower(provision_period)
                               WHERE  dataID = $1::uuid ),
                             $3::varchar)
 WHERE  dataID = $1::uuid;`
+
+	ProvForDataID = `
+SELECT lower(provision_period),
+       upper(provision_period),
+       tasks
+FROM   eye.provisions
+WHERE  dataID = $1::uuid;`
 )
 
 func init() {
 	m[ProvAdd] = `ProvAdd`
 	m[ProvFinalize] = `ProvFinalize`
+	m[ProvForDataID] = `ProvForDataID`
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

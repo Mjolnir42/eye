@@ -23,12 +23,6 @@ SELECT configurationID
 FROM   eye.configurations
 WHERE  configurationID = $1::uuid;`
 
-	ConfigurationUpdate = `
-UPDATE eye.configurations
-SET    lookupID = $2::varchar,
-       configuration = $3::jsonb
-WHERE  configurationID = $1::uuid;`
-
 	CfgAddID = `
 INSERT INTO eye.configurations (
             configurationID,
@@ -98,8 +92,6 @@ WHERE  configurationID = $1::uuid;`
 )
 
 func init() {
-	m[ConfigurationUpdate] = `ConfigurationUpdate`
-
 	m[CfgAddData] = `CfgAddData`
 	m[CfgAddID] = `CfgAddID`
 	m[CfgDataHistory] = `CfgDataHistory`

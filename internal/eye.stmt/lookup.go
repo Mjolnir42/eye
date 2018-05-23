@@ -33,11 +33,6 @@ LEFT JOIN eye.activations AS a
 WHERE     c.lookupID = $1::varchar
   AND     d.validity @> NOW()::timestamptz;`
 
-	LookupExists = `
-SELECT lookupID
-FROM   eye.lookup
-WHERE  lookupID = $1::varchar;`
-
 	NewLookupAdd = `
 INSERT INTO eye.lookup (
             lookupID,
@@ -51,17 +46,9 @@ WHERE  NOT EXISTS (
        FROM   eye.lookup
        WHERE  lookupID = $1::varchar
           OR  ( hostID = $2::numeric AND metric = $3::text));`
-
-	LookupIDForConfiguration = `
-SELECT lookupID
-FROM   eye.configurations
-WHERE  configurationID = $1::uuid;`
 )
 
 func init() {
-	m[LookupExists] = `LookupExists`
-	m[LookupIDForConfiguration] = `LookupIDForConfiguration`
-
 	m[NewLookupSearch] = `NewLookupSearch`
 	m[NewLookupAdd] = `NewLookupAdd`
 }

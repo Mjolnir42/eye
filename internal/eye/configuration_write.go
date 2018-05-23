@@ -22,12 +22,9 @@ import (
 
 // ConfigurationWrite handles write requests for configurations
 type ConfigurationWrite struct {
-	Input                        chan msg.Request
-	Shutdown                     chan struct{}
-	conn                         *sql.DB
-	stmtConfigurationUpdate      *sql.Stmt
-	stmtLookupIDForConfiguration *sql.Stmt
-	// NEW
+	Input                       chan msg.Request
+	Shutdown                    chan struct{}
+	conn                        *sql.DB
 	stmtNewLookupAdd            *sql.Stmt
 	stmtCfgAddID                *sql.Stmt
 	stmtCfgSelectValidForUpdate *sql.Stmt

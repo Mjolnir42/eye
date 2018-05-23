@@ -258,4 +258,31 @@ func (x *Rest) ConfigurationActivate(w http.ResponseWriter, r *http.Request,
 	respond(&w, &result)
 }
 
+// ConfigurationHistory accepts requests to retrieve the history of a
+// configuration
+func (x *Rest) ConfigurationHistory(w http.ResponseWriter, r *http.Request,
+	params httprouter.Params) {
+	defer panicCatcher(w)
+
+	request := msg.New(r, params)
+	request.Section = msg.SectionConfiguration
+	request.Action = msg.ActionHistory
+	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
+
+	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
+		replyBadRequest(&w, &request, err)
+		return
+	}
+
+	if !x.isAuthorized(&request) {
+		replyForbidden(&w, &request, nil)
+		return
+	}
+
+	handler := x.handlerMap.Get(`configuration_r`)
+	handler.Intake() <- request
+	result := <-request.Reply
+	respond(&w, &result)
+}
+
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

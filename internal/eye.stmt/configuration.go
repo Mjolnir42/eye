@@ -101,14 +101,14 @@ func init() {
 	m[ConfigurationExists] = `ConfigurationExists`
 	m[ConfigurationUpdate] = `ConfigurationUpdate`
 
+	m[CfgAddData] = `CfgAddData`
 	m[CfgAddID] = `CfgAddID`
+	m[CfgDataHistory] = `CfgDataHistory`
+	m[CfgDataUpdateValidity] = `CfgDataUpdateValidity`
+	m[CfgList] = `CfgList`
 	m[CfgSelectValidForUpdate] = `CfgSelectValidForUpdate`
 	m[CfgSelectValid] = `CfgSelectValid`
-	m[CfgDataUpdateValidity] = `CfgDataUpdateValidity`
-	m[CfgAddData] = `CfgAddData`
 	m[CfgShow] = `CfgShow`
-	m[CfgList] = `CfgList`
-	m[CfgDataHistory] = `CfgDataHistory`
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

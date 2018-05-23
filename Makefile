@@ -4,6 +4,7 @@
 EYEVERSION != cat `git rev-parse --show-toplevel`/VERSION
 BRANCH != git rev-parse --symbolic-full-name --abbrev-ref HEAD
 GITHASH != git rev-parse --short HEAD
+VERSIONSTRING = "$(EYEVERSION)-$(GITHASH)/$(BRANCH)"
 
 all: validate
 
@@ -35,10 +36,10 @@ man: install_freebsd install_linux
 	@${GOPATH}/bin/eye --create-manpage > docs/man/eye.1
 
 install_freebsd: generate
-	@env GOOS=freebsd GOARCH=amd64 go install -ldflags "-X main.eyeVersion=$(EYEVERSION)-$(GITHASH)/$(BRANCH)" ./...
+	@env GOOS=freebsd GOARCH=amd64 go install -ldflags "-X main.eyeVersion=$(VERSIONSTRING)" ./...
 
 install_linux: generate
-	@env GOOS=linux GOARCH=amd64 go install -ldflags "-X main.eyeVersion=$(EYEVERSION)-$(GITHASH)/$(BRANCH)" ./...
+	@env GOOS=linux GOARCH=amd64 go install -ldflags "-X main.eyeVersion=$(VERSIONSTRING)" ./...
 
 generate:
 	@go generate ./cmd/...

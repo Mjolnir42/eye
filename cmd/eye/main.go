@@ -30,6 +30,7 @@ var eyeVersion string
 func init() {
 	logrus.SetOutput(os.Stderr)
 	erebos.SetLogrusOptions()
+	rest.EyeVersion = eyeVersion
 }
 
 func main() {

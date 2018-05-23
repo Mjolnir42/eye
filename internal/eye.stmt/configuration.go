@@ -87,6 +87,14 @@ FROM   eye.configurations_data AS d
 JOIN   eye.provisions AS p
   ON   d.dataID = p.dataID
 WHERE  d.dataID = $1::uuid;`
+
+	CfgDataHistory = `
+SELECT dataID,
+       lower(validity),
+       upper(validity),
+       configuration
+FROM   eye.configurations_data
+WHERE  configurationID = $1::uuid;`
 )
 
 func init() {
@@ -100,6 +108,7 @@ func init() {
 	m[CfgAddData] = `CfgAddData`
 	m[CfgShow] = `CfgShow`
 	m[CfgList] = `CfgList`
+	m[CfgDataHistory] = `CfgDataHistory`
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

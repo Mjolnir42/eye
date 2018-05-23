@@ -82,6 +82,21 @@ JOIN   eye.provisions AS p
   ON   d.dataID = p.dataID
 WHERE  d.dataID = $1::uuid;`
 
+	CfgVersion = `
+SELECT d.dataID,
+       d.configuration,
+       lower(d.validity),
+       upper(d.validity),
+       lower(p.provision_period),
+       upper(p.provision_period),
+       p.tasks
+FROM   eye.configurations_data AS d
+JOIN   eye.provisions AS p
+  ON   d.dataID = p.dataID
+WHERE  d.configurationID = $1::uuid
+  AND  (d.dataID = $2::uuid OR $2::uuid IS NULL)
+  AND  (d.validity @> $3::timestamptz OR $3::timestamptz IS NULL);`
+
 	CfgDataHistory = `
 SELECT dataID,
        lower(validity),
@@ -101,6 +116,7 @@ func init() {
 	m[CfgSelectValidForUpdate] = `CfgSelectValidForUpdate`
 	m[CfgSelectValid] = `CfgSelectValid`
 	m[CfgShow] = `CfgShow`
+	m[CfgVersion] = `CfgVersion`
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

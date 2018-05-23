@@ -346,6 +346,7 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 			replyInternalError(&w, &request, err)
 			return
 		}
+		request.Search.ValidAt = request.Search.ValidAt.UTC()
 	}
 
 	// while both dataID and valid are optional, one of them must be

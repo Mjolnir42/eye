@@ -21,6 +21,7 @@ func (x *Rest) setupRouter() *httprouter.Router {
 	router.GET(`/api/v1/configuration/:hash`, x.Verify(x.LookupConfiguration))
 	router.GET(`/api/v1/item/:ID`, x.Verify(x.ConfigurationShow))
 	router.GET(`/api/v1/item/`, x.Verify(x.ConfigurationList))
+	router.GET(`/api/v2/configuration/:ID/history/*DATA`, x.Verify(x.ConfigurationVersion))
 	router.GET(`/api/v2/configuration/:ID/history`, x.Verify(x.ConfigurationHistory))
 	router.GET(`/api/v2/configuration/:ID`, x.Verify(x.ConfigurationShow))
 	router.GET(`/api/v2/configuration/`, x.Verify(x.ConfigurationList))

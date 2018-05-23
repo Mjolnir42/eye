@@ -11,6 +11,7 @@ package msg // import "github.com/mjolnir42/eye/internal/eye.msg"
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mjolnir42/eye/lib/eye.proto/v2"
@@ -53,7 +54,9 @@ type Flags struct {
 
 // Search contains search paramaters for this request
 type Search struct {
-	Registration v2.Registration
+	Registration  v2.Registration
+	Configuration v2.Configuration
+	ValidAt       time.Time
 }
 
 // New returns a Request

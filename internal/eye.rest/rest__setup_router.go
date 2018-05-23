@@ -13,6 +13,7 @@ import "github.com/julienschmidt/httprouter"
 // setupRouter returns a configured httprouter
 func (x *Rest) setupRouter() *httprouter.Router {
 	router := httprouter.New()
+	router.RedirectTrailingSlash = false
 
 	router.DELETE(`/api/v1/item/:ID`, x.Verify(x.ConfigurationRemove))
 	router.DELETE(`/api/v2/configuration/:ID`, x.Verify(x.ConfigurationRemove))

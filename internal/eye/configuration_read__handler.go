@@ -38,6 +38,7 @@ func (r *ConfigurationRead) Run() {
 		stmt.CfgList:        r.stmtCfgList,
 		stmt.CfgDataHistory: r.stmtCfgHistory,
 		stmt.ProvForDataID:  r.stmtProvInfo,
+		stmt.CfgVersion:     r.stmtCfgVersion,
 	} {
 		if prepStmt, err = r.conn.Prepare(statement); err != nil {
 			r.errLog.Fatal(`configuration_r`, err, stmt.Name(statement))

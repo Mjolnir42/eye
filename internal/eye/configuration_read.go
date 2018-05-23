@@ -33,6 +33,7 @@ type ConfigurationRead struct {
 	stmtCfgList        *sql.Stmt
 	stmtCfgHistory     *sql.Stmt
 	stmtProvInfo       *sql.Stmt
+	stmtCfgVersion     *sql.Stmt
 	appLog             *logrus.Logger
 	reqLog             *logrus.Logger
 	errLog             *logrus.Logger
@@ -57,6 +58,8 @@ func (r *ConfigurationRead) process(q *msg.Request) {
 		r.list(q, &result)
 	case msg.ActionShow:
 		r.show(q, &result)
+	case msg.ActionVersion:
+		r.version(q, &result)
 	default:
 		result.UnknownRequest(q)
 	}
@@ -337,6 +340,121 @@ func (r *ConfigurationRead) history(q *msg.Request, mr *msg.Result) {
 
 		configuration.Data[idx] = data
 	}
+	mr.Configuration = append(mr.Configuration, configuration)
+
+	if err = tx.Commit(); err != nil {
+		mr.ServerError(err)
+		return
+	}
+	mr.OK()
+	return
+
+abort:
+	mr.ServerError(err)
+
+rollback:
+	tx.Rollback()
+	return
+}
+
+// version returns an arbitrary version of specific configuration
+func (r *ConfigurationRead) version(q *msg.Request, mr *msg.Result) {
+	var (
+		err                                     error
+		dataID, confResult                      string
+		tasks                                   []string
+		configuration                           v2.Configuration
+		data                                    v2.Data
+		validFrom, validUntil                   time.Time
+		provisionTS, deprovisionTS, activatedAt time.Time
+		tx                                      *sql.Tx
+		optionalValidAt                         pq.NullTime
+		optionalDataID                          sql.NullString
+	)
+
+	// open transaction
+	if tx, err = r.conn.Begin(); err != nil {
+		mr.ServerError(err)
+		return
+	}
+
+	// mark transaction read-only
+	if _, err = tx.Exec(stmt.ReadOnlyTransaction); err != nil {
+		goto abort
+	}
+
+	// there may be an optional ValidAt timestamp
+	if !q.Search.ValidAt.IsZero() {
+		optionalValidAt.Time = q.Search.ValidAt
+		optionalValidAt.Valid = true
+	}
+
+	// there may be an optional DataID string
+	if q.Search.Configuration.Data[0].ID != `` {
+		optionalDataID.String = q.Search.Configuration.Data[0].ID
+		optionalDataID.Valid = true
+	}
+
+	// re-check that eye.rest validated the request correctly - the two
+	// optional conditions must not be omitted together
+	if !(optionalValidAt.Valid || optionalDataID.Valid) {
+		goto abort
+	}
+
+	// read queried configuration data. Guaranteed to return [0,1] rows
+	// since dataID is unique and validity ranges are not overlapping
+	if err = tx.Stmt(r.stmtCfgVersion).QueryRow(
+		q.Search.Configuration.ID,
+		optionalDataID,
+		optionalValidAt,
+	).Scan(
+		&dataID,
+		&confResult,
+		&validFrom,
+		&validUntil,
+		&provisionTS,
+		&deprovisionTS,
+		pq.Array(&tasks),
+	); err == sql.ErrNoRows {
+		mr.NotFound(err)
+		goto rollback
+	} else if err != nil {
+		goto abort
+	}
+
+	// unmarshal JSON stored within the database
+	if err = json.Unmarshal([]byte(confResult), &configuration); err != nil {
+		goto abort
+	}
+
+	// check if everything worked out
+	if configuration.ID != q.Search.Configuration.ID {
+		goto abort
+	}
+
+	// query if this configurationID is activated
+	if err = tx.Stmt(r.stmtActivationGet).QueryRow(
+		q.Configuration.ID,
+	).Scan(
+		&activatedAt,
+	); err == sql.ErrNoRows {
+		configuration.ActivatedAt = `never`
+	} else if err != nil {
+		goto abort
+	} else {
+		configuration.ActivatedAt = activatedAt.Format(RFC3339Milli)
+	}
+
+	// populate result metadata
+	data = configuration.Data[0]
+	data.Info = v2.MetaInformation{
+		ValidFrom:       v2.FormatValidity(validFrom),
+		ValidUntil:      v2.FormatValidity(validUntil),
+		ProvisionedAt:   v2.FormatProvision(provisionTS),
+		DeprovisionedAt: v2.FormatProvision(deprovisionTS),
+		Tasks:           tasks,
+	}
+	configuration.Data = []v2.Data{data}
 	mr.Configuration = append(mr.Configuration, configuration)
 
 	if err = tx.Commit(); err != nil {

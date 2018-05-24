@@ -15,6 +15,7 @@ import (
 	"github.com/mjolnir42/erebos"
 	"github.com/mjolnir42/eye/internal/eye"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
+	"github.com/mjolnir42/limit"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
@@ -23,6 +24,13 @@ var ShutdownInProgress bool
 
 // Metrics is the map of runtime metric registries
 var Metrics = make(map[string]metrics.Registry)
+
+// concurrenyLimit caps the number of active outgoing HTTP requests
+var concurrenyLimit *limit.Limit
+
+func init() {
+	concurrenyLimit = limit.New(128)
+}
 
 // Rest holds the required state for the REST interface
 type Rest struct {

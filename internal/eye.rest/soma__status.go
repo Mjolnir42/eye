@@ -49,8 +49,11 @@ feedbackloop:
 	for i := 0; i < maxFeedbackAttempts; i++ {
 		<-time.After(time.Duration(i*baseTimeout) * time.Millisecond)
 
+		concurrenyLimit.Start()
 		client = client.SetTimeout(time.Duration((i+1)*baseTimeout) * time.Millisecond)
 		if res, err := client.R().Patch(url); err == nil {
+			concurrenyLimit.Done()
+
 			switch res.StatusCode() {
 			case http.StatusOK:
 				success = true
@@ -59,6 +62,8 @@ feedbackloop:
 				// TODO log error, abort: no point resending bad requests
 				break feedbackloop
 			}
+		} else {
+			concurrenyLimit.Done()
 		}
 	}
 

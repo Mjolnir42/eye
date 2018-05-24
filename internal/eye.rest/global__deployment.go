@@ -162,10 +162,9 @@ func (x *Rest) DeploymentProcess(w http.ResponseWriter, r *http.Request,
 // notification was received by x.DeploymentNotification
 func (x *Rest) fetchPushDeployment(w *http.ResponseWriter, q *msg.Request) {
 	var (
-		client *resty.Client
-		resp   *resty.Response
-		res    proto.Result
-		err    error
+		resp *resty.Response
+		res  proto.Result
+		err  error
 	)
 
 	// build URL to download deploymentDetails
@@ -177,9 +176,22 @@ func (x *Rest) fetchPushDeployment(w *http.ResponseWriter, q *msg.Request) {
 	foldSlashes(soma)
 	detailsDownload := soma.String()
 
-	// fetch DeploymentDetails
-	client = resty.New().SetTimeout(750 * time.Millisecond)
-	if resp, err = client.R().Get(detailsDownload); err != nil {
+	// fetch DeploymentDetails inside concurrency limited go routine
+	// without blocking the full handler within the limiter
+	done := make(chan struct{})
+	go func(sig chan struct{}, rp *resty.Response, addr string, e error) {
+		concurrenyLimit.Start()
+
+		client := resty.New().SetTimeout(750 * time.Millisecond)
+		resp, err = client.R().Get(addr)
+
+		concurrenyLimit.Done()
+		close(sig)
+	}(done, resp, detailsDownload, err)
+
+	// block on running go routine
+	<-done
+	if err != nil {
 		replyGatewayTimeout(w, q, err)
 		return
 	}

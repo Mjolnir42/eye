@@ -65,16 +65,6 @@ func (x *Rest) DeploymentNotification(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	// build URL to send deployment feedback
-	request.Flags.SendDeploymentFeedback = true
-	soma, _ := url.Parse(x.conf.Eye.SomaURL)
-	soma.Path = fmt.Sprintf("/%s/%s/{STATUS}",
-		request.Notification.PathPrefix,
-		request.Notification.ID.String(),
-	)
-	foldSlashes(soma)
-	request.FeedbackURL = soma.String()
-
 	// request authorization for request
 	if !x.isAuthorized(&request) {
 		replyForbidden(&w, &request, nil)
@@ -101,11 +91,6 @@ func (x *Rest) DeploymentProcess(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	// build URL to send deployment feedback
-	soma, _ := url.Parse(x.conf.Eye.SomaURL)
-	soma.Path = fmt.Sprintf("/deployments/id/%s/{STATUS}", (*cReq.Deployments)[0].ID)
-	request.FeedbackURL = soma.String()
-
 	if err = resolveFlags(nil, &request); err != nil {
 		replyBadRequest(&w, &request, err)
 		return
@@ -121,6 +106,9 @@ func (x *Rest) DeploymentProcess(w http.ResponseWriter, r *http.Request,
 		replyInternalError(&w, &request, err)
 		return
 	}
+
+	// build URL to send deployment feedback
+	x.somaSetFeedbackURL(&request)
 
 	switch r.Method {
 	// called via v1 update API PUT:/api/v1/item/:ID
@@ -227,6 +215,9 @@ func (x *Rest) fetchPushDeployment(w *http.ResponseWriter, q *msg.Request) {
 		replyBadRequest(w, q, err)
 		return
 	}
+
+	// build URL to send deployment feedback
+	x.somaSetFeedbackURL(q)
 
 	if !x.isAuthorized(q) {
 		replyForbidden(w, q, nil)

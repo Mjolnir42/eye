@@ -34,7 +34,6 @@ func respond(w *http.ResponseWriter, r *msg.Result) {
 func respondV1(w *http.ResponseWriter, r *msg.Result) {
 	var bjson []byte
 	var err error
-	feedback := `failed`
 	// not available via v1
 	r.Flags.CacheInvalidation = false
 	r.Flags.AlarmClearing = false
@@ -143,10 +142,7 @@ func respondV1(w *http.ResponseWriter, r *msg.Result) {
 	}
 
 	if r.Flags.SendDeploymentFeedback {
-		if r.Code == msg.ResultOK {
-			feedback = `success`
-		}
-		go sendSomaFeedback(r.FeedbackURL, feedback)
+		go somaStatusUpdate(r)
 	}
 }
 
@@ -155,7 +151,6 @@ func respondV2(w *http.ResponseWriter, r *msg.Result) {
 	var (
 		bjson    []byte
 		err      error
-		feedback string
 		protoRes v2.Result
 	)
 
@@ -175,7 +170,6 @@ func respondV2(w *http.ResponseWriter, r *msg.Result) {
 	case msg.SectionRegistration:
 		protoRes = v2.NewRegistrationResult()
 	}
-	feedback = `success`
 	// record what was performed
 	protoRes.Section = r.Section
 	protoRes.Action = r.Action
@@ -183,7 +177,6 @@ func respondV2(w *http.ResponseWriter, r *msg.Result) {
 	// internal result contains an error, copy over into protocol result
 	if r.Error != nil {
 		*protoRes.Errors = append(*protoRes.Errors, r.Error.Error())
-		feedback = `failed`
 	}
 
 	// copy internal result data into protocol result
@@ -223,12 +216,11 @@ func respondV2(w *http.ResponseWriter, r *msg.Result) {
 		*protoRes.Registrations = nil
 		r.Flags.CacheInvalidation = false
 		r.Flags.AlarmClearing = false
-		feedback = `failed`
 	}
 
 	// send deployment feedback to SOMA
 	if r.Flags.SendDeploymentFeedback {
-		go sendSomaFeedback(r.FeedbackURL, feedback)
+		go somaStatusUpdate(r)
 	}
 
 	if r.Flags.CacheInvalidation && !r.Flags.AlarmClearing {

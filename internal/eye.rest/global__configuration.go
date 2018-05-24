@@ -113,6 +113,8 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 	)
 	request.Configuration.LookupID = request.LookupHash
 
+	x.somaSetFeedbackURL(&request)
+
 	if !x.isAuthorized(&request) {
 		replyForbidden(&w, &request, nil)
 		return
@@ -181,6 +183,8 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
+	x.somaSetFeedbackURL(&request)
+
 	if !x.isAuthorized(&request) {
 		replyForbidden(&w, &request, nil)
 		return
@@ -221,6 +225,8 @@ func (x *Rest) ConfigurationRemove(w http.ResponseWriter, r *http.Request,
 			return
 		}
 	}
+
+	x.somaSetFeedbackURL(&request)
 
 	if !x.isAuthorized(&request) {
 		replyForbidden(&w, &request, nil)

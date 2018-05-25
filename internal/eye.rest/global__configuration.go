@@ -34,19 +34,19 @@ func (x *Rest) ConfigurationShow(w http.ResponseWriter, r *http.Request,
 	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
-		replyBadRequest(&w, &request, err)
+		x.replyBadRequest(&w, &request, err)
 		return
 	}
 
 	if !x.isAuthorized(&request) {
-		replyForbidden(&w, &request, nil)
+		x.replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`configuration_r`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	respond(&w, &result)
+	x.respond(&w, &result)
 }
 
 // ConfigurationList accepts requests to list all configurations
@@ -59,14 +59,14 @@ func (x *Rest) ConfigurationList(w http.ResponseWriter, r *http.Request,
 	request.Action = msg.ActionList
 
 	if !x.isAuthorized(&request) {
-		replyForbidden(&w, &request, nil)
+		x.replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`configuration_r`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	respond(&w, &result)
+	x.respond(&w, &result)
 }
 
 // ConfigurationAdd accepts requests to add a configuration
@@ -82,7 +82,7 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 	case msg.ProtocolOne:
 		cReq := &v1.ConfigurationItem{}
 		if err := decodeJSONBody(r, cReq); err != nil {
-			replyUnprocessableEntity(&w, &request, err)
+			x.replyUnprocessableEntity(&w, &request, err)
 			return
 		}
 		request.Configuration = v2.ConfigurationFromV1(cReq)
@@ -90,19 +90,19 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 	case msg.ProtocolTwo:
 		cReq := v2.NewConfigurationRequest()
 		if err := decodeJSONBody(r, &cReq); err != nil {
-			replyUnprocessableEntity(&w, &request, err)
+			x.replyUnprocessableEntity(&w, &request, err)
 			return
 		}
 		request.Configuration = *cReq.Configuration
 
 		// only the v2 API has request flags
 		if err := resolveFlags(&cReq, &request); err != nil {
-			replyBadRequest(&w, &request, err)
+			x.replyBadRequest(&w, &request, err)
 			return
 		}
 
 	default:
-		replyInternalError(&w, &request, nil)
+		x.replyInternalError(&w, &request, nil)
 		return
 	}
 
@@ -116,14 +116,14 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 	x.somaSetFeedbackURL(&request)
 
 	if !x.isAuthorized(&request) {
-		replyForbidden(&w, &request, nil)
+		x.replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`configuration_w`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	respond(&w, &result)
+	x.respond(&w, &result)
 }
 
 // ConfigurationUpdate accepts requests to update a configuration
@@ -139,7 +139,7 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	case msg.ProtocolOne:
 		cReq := &v1.ConfigurationItem{}
 		if err := decodeJSONBody(r, cReq); err != nil {
-			replyUnprocessableEntity(&w, &request, err)
+			x.replyUnprocessableEntity(&w, &request, err)
 			return
 		}
 		request.Configuration = v2.ConfigurationFromV1(cReq)
@@ -147,19 +147,19 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	case msg.ProtocolTwo:
 		cReq := v2.NewConfigurationRequest()
 		if err := decodeJSONBody(r, &cReq); err != nil {
-			replyUnprocessableEntity(&w, &request, err)
+			x.replyUnprocessableEntity(&w, &request, err)
 			return
 		}
 		request.Configuration = *cReq.Configuration
 
 		// only the v2 API has request flags
 		if err := resolveFlags(&cReq, &request); err != nil {
-			replyBadRequest(&w, &request, err)
+			x.replyBadRequest(&w, &request, err)
 			return
 		}
 
 	default:
-		replyInternalError(&w, &request, nil)
+		x.replyInternalError(&w, &request, nil)
 		return
 	}
 
@@ -171,7 +171,7 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	request.Configuration.LookupID = request.LookupHash
 
 	if request.Configuration.ID != strings.ToLower(params.ByName(`ID`)) {
-		replyBadRequest(&w, &request, fmt.Errorf(
+		x.replyBadRequest(&w, &request, fmt.Errorf(
 			"Mismatched IDs in update: [%s] vs [%s]",
 			request.Configuration.ID,
 			strings.ToLower(params.ByName(`ID`)),
@@ -179,21 +179,21 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	}
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
-		replyBadRequest(&w, &request, err)
+		x.replyBadRequest(&w, &request, err)
 		return
 	}
 
 	x.somaSetFeedbackURL(&request)
 
 	if !x.isAuthorized(&request) {
-		replyForbidden(&w, &request, nil)
+		x.replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`configuration_w`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	respond(&w, &result)
+	x.respond(&w, &result)
 }
 
 // ConfigurationRemove accepts requests to remove a configuration
@@ -207,7 +207,7 @@ func (x *Rest) ConfigurationRemove(w http.ResponseWriter, r *http.Request,
 	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
-		replyBadRequest(&w, &request, err)
+		x.replyBadRequest(&w, &request, err)
 		return
 	}
 
@@ -216,12 +216,12 @@ func (x *Rest) ConfigurationRemove(w http.ResponseWriter, r *http.Request,
 	if request.Version != msg.ProtocolOne {
 		cReq := v2.NewConfigurationRequest()
 		if err := decodeJSONBody(r, &cReq); err != nil {
-			replyBadRequest(&w, &request, err)
+			x.replyBadRequest(&w, &request, err)
 			return
 		}
 
 		if err := resolveFlags(&cReq, &request); err != nil {
-			replyBadRequest(&w, &request, err)
+			x.replyBadRequest(&w, &request, err)
 			return
 		}
 	}
@@ -229,14 +229,14 @@ func (x *Rest) ConfigurationRemove(w http.ResponseWriter, r *http.Request,
 	x.somaSetFeedbackURL(&request)
 
 	if !x.isAuthorized(&request) {
-		replyForbidden(&w, &request, nil)
+		x.replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`configuration_w`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	respond(&w, &result)
+	x.respond(&w, &result)
 }
 
 // ConfigurationActivate accepts requests to activate a configuration
@@ -250,19 +250,19 @@ func (x *Rest) ConfigurationActivate(w http.ResponseWriter, r *http.Request,
 	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
-		replyBadRequest(&w, &request, err)
+		x.replyBadRequest(&w, &request, err)
 		return
 	}
 
 	if !x.isAuthorized(&request) {
-		replyForbidden(&w, &request, nil)
+		x.replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`configuration_w`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	respond(&w, &result)
+	x.respond(&w, &result)
 }
 
 // ConfigurationHistory accepts requests to retrieve the history of a
@@ -277,19 +277,19 @@ func (x *Rest) ConfigurationHistory(w http.ResponseWriter, r *http.Request,
 	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
-		replyBadRequest(&w, &request, err)
+		x.replyBadRequest(&w, &request, err)
 		return
 	}
 
 	if !x.isAuthorized(&request) {
-		replyForbidden(&w, &request, nil)
+		x.replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`configuration_r`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	respond(&w, &result)
+	x.respond(&w, &result)
 }
 
 // ConfigurationVersion accepts requests to retrieve a specific,
@@ -309,13 +309,13 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 		strings.ToLower(params.ByName(`ID`)),
 	)
 	if request.Search.Configuration.ID == `` {
-		replyBadRequest(&w, &request, nil)
+		x.replyBadRequest(&w, &request, nil)
 		return
 	}
 	if _, err = uuid.FromString(
 		request.Search.Configuration.ID,
 	); err != nil {
-		replyBadRequest(&w, &request, err)
+		x.replyBadRequest(&w, &request, err)
 		return
 	}
 
@@ -327,7 +327,7 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 	))
 	if dataID != `` {
 		if _, err = uuid.FromString(dataID); err != nil {
-			replyBadRequest(&w, &request, err)
+			x.replyBadRequest(&w, &request, err)
 			return
 		}
 		request.Search.Configuration.Data = []v2.Data{v2.Data{
@@ -341,7 +341,7 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 	// optional, but if it is set then it must be a parsable RFC3339
 	// timestamp
 	if err = r.ParseForm(); err != nil {
-		replyInternalError(&w, &request, err)
+		x.replyInternalError(&w, &request, err)
 		return
 	}
 	if valid := r.Form.Get(`valid`); valid != `` {
@@ -349,7 +349,7 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 			time.RFC3339Nano,
 			valid,
 		); err != nil {
-			replyInternalError(&w, &request, err)
+			x.replyInternalError(&w, &request, err)
 			return
 		}
 		request.Search.ValidAt = request.Search.ValidAt.UTC()
@@ -358,19 +358,19 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 	// while both dataID and valid are optional, one of them must be
 	// provided
 	if request.Search.ValidAt.IsZero() && dataID == `` {
-		replyBadRequest(&w, &request, nil)
+		x.replyBadRequest(&w, &request, nil)
 		return
 	}
 
 	if !x.isAuthorized(&request) {
-		replyForbidden(&w, &request, nil)
+		x.replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`configuration_r`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	respond(&w, &result)
+	x.respond(&w, &result)
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

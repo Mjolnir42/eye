@@ -15,59 +15,59 @@ import (
 )
 
 // replyNoContent returns a 204 result
-func replyNoContent(w *http.ResponseWriter, q *msg.Request) {
+func (x *Rest) replyNoContent(w *http.ResponseWriter, q *msg.Request) {
 	result := msg.FromRequest(q)
 	result.NoContent()
-	respond(w, &result)
+	x.respond(w, &result)
 }
 
 // replyBadRequest returns a 400 error
-func replyBadRequest(w *http.ResponseWriter, q *msg.Request, err error) {
+func (x *Rest) replyBadRequest(w *http.ResponseWriter, q *msg.Request, err error) {
 	result := msg.FromRequest(q)
 	result.BadRequest(err)
-	respond(w, &result)
+	x.respond(w, &result)
 }
 
 // replyForbidden returns a 403 error
-func replyForbidden(w *http.ResponseWriter, q *msg.Request, err error) {
+func (x *Rest) replyForbidden(w *http.ResponseWriter, q *msg.Request, err error) {
 	result := msg.FromRequest(q)
 	result.Forbidden(err)
-	respond(w, &result)
+	x.respond(w, &result)
 }
 
 // replyGone returns a 410 error
-func replyGone(w *http.ResponseWriter, q *msg.Request, err error) {
+func (x *Rest) replyGone(w *http.ResponseWriter, q *msg.Request, err error) {
 	result := msg.FromRequest(q)
 	result.Gone(err)
-	respond(w, &result)
+	x.respond(w, &result)
 }
 
 // replyUnprocessableEntity returns a 422 error
-func replyUnprocessableEntity(w *http.ResponseWriter, q *msg.Request, err error) {
+func (x *Rest) replyUnprocessableEntity(w *http.ResponseWriter, q *msg.Request, err error) {
 	result := msg.FromRequest(q)
 	result.UnprocessableEntity(err)
-	respond(w, &result)
+	x.respond(w, &result)
 }
 
 // replyInternalError returns a 500 error
-func replyInternalError(w *http.ResponseWriter, q *msg.Request, err error) {
+func (x *Rest) replyInternalError(w *http.ResponseWriter, q *msg.Request, err error) {
 	result := msg.FromRequest(q)
 	result.ServerError(err)
-	respond(w, &result)
+	x.respond(w, &result)
 }
 
 // replyBadGateway returns a 502 error
-func replyBadGateway(w *http.ResponseWriter, q *msg.Request, err error) {
+func (x *Rest) replyBadGateway(w *http.ResponseWriter, q *msg.Request, err error) {
 	result := msg.FromRequest(q)
 	result.BadGateway(err)
-	respond(w, &result)
+	x.respond(w, &result)
 }
 
 // replyGatewayTimeout returns a 504 error
-func replyGatewayTimeout(w *http.ResponseWriter, q *msg.Request, err error) {
+func (x *Rest) replyGatewayTimeout(w *http.ResponseWriter, q *msg.Request, err error) {
 	result := msg.FromRequest(q)
 	result.GatewayTimeout(err)
-	respond(w, &result)
+	x.respond(w, &result)
 }
 
 // sendJSONReply returns a 200 status JSON result

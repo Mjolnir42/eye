@@ -31,19 +31,19 @@ func (x *Rest) RegistrationShow(w http.ResponseWriter, r *http.Request,
 	request.Registration.ID = strings.ToLower(params.ByName(`ID`))
 
 	if !x.isAuthorized(&request) {
-		replyForbidden(&w, &request, nil)
+		x.replyForbidden(&w, &request, nil)
 		return
 	}
 
 	if _, err := uuid.FromString(request.Registration.ID); err != nil {
-		replyBadRequest(&w, &request, err)
+		x.replyBadRequest(&w, &request, err)
 		return
 	}
 
 	handler := x.handlerMap.Get(`registration_r`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	respond(&w, &result)
+	x.respond(&w, &result)
 }
 
 // RegistrationList accepts requests to list all registrations. If r
@@ -61,7 +61,7 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request,
 	// and ActionSearch. Any number of parameters can be specified at
 	// the same time
 	if err := r.ParseForm(); err != nil {
-		replyBadRequest(&w, &request, err)
+		x.replyBadRequest(&w, &request, err)
 		return
 	}
 	if app := r.Form.Get(`application`); app != `` {
@@ -76,13 +76,13 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request,
 		if iPort, err := strconv.ParseInt(port, 10, 64); err == nil {
 			request.Search.Registration.Port = iPort
 		} else {
-			replyBadRequest(&w, &request, err)
+			x.replyBadRequest(&w, &request, err)
 			return
 		}
 		request.Action = msg.ActionSearch
 		// negative+zero port numbers are invalid
 		if request.Search.Registration.Port <= 0 {
-			replyBadRequest(&w, &request, nil)
+			x.replyBadRequest(&w, &request, nil)
 			return
 		}
 
@@ -93,13 +93,13 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request,
 		if iDb, err := strconv.ParseInt(db, 10, 64); err == nil {
 			request.Search.Registration.Database = iDb
 		} else {
-			replyBadRequest(&w, &request, err)
+			x.replyBadRequest(&w, &request, err)
 			return
 		}
 		request.Action = msg.ActionSearch
 		// negative database numbers are invalid
 		if request.Search.Registration.Database < 0 {
-			replyBadRequest(&w, &request, nil)
+			x.replyBadRequest(&w, &request, nil)
 			return
 		}
 	} else {
@@ -113,14 +113,14 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request,
 	}
 
 	if !x.isAuthorized(&request) {
-		replyForbidden(&w, &request, nil)
+		x.replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`registration_r`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	respond(&w, &result)
+	x.respond(&w, &result)
 }
 
 // RegistrationAdd accepts requests to add a registration
@@ -134,20 +134,20 @@ func (x *Rest) RegistrationAdd(w http.ResponseWriter, r *http.Request,
 
 	cReq := v2.NewRegistrationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
-		replyBadRequest(&w, &request, err)
+		x.replyBadRequest(&w, &request, err)
 		return
 	}
 	request.Registration = *cReq.Registration
 
 	if !x.isAuthorized(&request) {
-		replyForbidden(&w, &request, nil)
+		x.replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`registration_w`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	respond(&w, &result)
+	x.respond(&w, &result)
 }
 
 // RegistrationUpdate accepts requests to update a registration
@@ -161,13 +161,13 @@ func (x *Rest) RegistrationUpdate(w http.ResponseWriter, r *http.Request,
 
 	cReq := v2.NewRegistrationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
-		replyBadRequest(&w, &request, err)
+		x.replyBadRequest(&w, &request, err)
 		return
 	}
 	request.Registration = *cReq.Registration
 
 	if request.Registration.ID != params.ByName(`ID`) {
-		replyBadRequest(&w, &request, fmt.Errorf(
+		x.replyBadRequest(&w, &request, fmt.Errorf(
 			"Mismatched IDs in update: [%s] vs [%s]",
 			request.Registration.ID,
 			params.ByName(`ID`),
@@ -175,14 +175,14 @@ func (x *Rest) RegistrationUpdate(w http.ResponseWriter, r *http.Request,
 	}
 
 	if !x.isAuthorized(&request) {
-		replyForbidden(&w, &request, nil)
+		x.replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`registration_w`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	respond(&w, &result)
+	x.respond(&w, &result)
 }
 
 // RegistrationRemove accepts requests to remove a registration
@@ -198,19 +198,19 @@ func (x *Rest) RegistrationRemove(w http.ResponseWriter, r *http.Request,
 	// request body may contain request flag overrides
 	cReq := v2.NewRegistrationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
-		replyBadRequest(&w, &request, err)
+		x.replyBadRequest(&w, &request, err)
 		return
 	}
 
 	if !x.isAuthorized(&request) {
-		replyForbidden(&w, &request, nil)
+		x.replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`registration_w`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	respond(&w, &result)
+	x.respond(&w, &result)
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

@@ -17,21 +17,21 @@ import (
 )
 
 // respond is the output function for all requests
-func respond(w *http.ResponseWriter, r *msg.Result) {
+func (x *Rest) respond(w *http.ResponseWriter, r *msg.Result) {
 	switch r.Version {
 	case msg.ProtocolInvalid:
 		panic(`API Protocol 0 is not valid`)
 	case msg.ProtocolOne:
-		respondV1(w, r)
+		x.respondV1(w, r)
 	case msg.ProtocolTwo:
-		respondV2(w, r)
+		x.respondV2(w, r)
 	default:
 		panic(`API Protocol unknown`)
 	}
 }
 
 // respondV1 is the output function emitting API version 1 results
-func respondV1(w *http.ResponseWriter, r *msg.Result) {
+func (x *Rest) respondV1(w *http.ResponseWriter, r *msg.Result) {
 	var bjson []byte
 	var err error
 	// not available via v1
@@ -147,7 +147,7 @@ func respondV1(w *http.ResponseWriter, r *msg.Result) {
 }
 
 // respondV2 is the output function emitting API version 2 results
-func respondV2(w *http.ResponseWriter, r *msg.Result) {
+func (x *Rest) respondV2(w *http.ResponseWriter, r *msg.Result) {
 	var (
 		bjson    []byte
 		err      error

@@ -28,13 +28,13 @@ func (x *Rest) LookupConfiguration(w http.ResponseWriter, r *http.Request,
 	request.LookupHash = strings.ToLower(params.ByName(`hash`))
 
 	if !x.isAuthorized(&request) {
-		replyForbidden(&w, &request, nil)
+		x.replyForbidden(&w, &request, nil)
 		return
 	}
 
 	// lookup is to be performed via SHA2/256 hash
 	if len(request.LookupHash) != 64 {
-		replyBadRequest(&w, &request, fmt.Errorf(
+		x.replyBadRequest(&w, &request, fmt.Errorf(
 			`Invalid SHA2-256 lookup hash format`,
 		))
 		return
@@ -43,7 +43,7 @@ func (x *Rest) LookupConfiguration(w http.ResponseWriter, r *http.Request,
 	handler := x.handlerMap.Get(`lookup_r`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	respond(&w, &result)
+	x.respond(&w, &result)
 }
 
 // LookupRegistration accepts lookup requests for all registrations of a
@@ -59,14 +59,14 @@ func (x *Rest) LookupRegistration(w http.ResponseWriter, r *http.Request,
 	request.Search.Registration.Application = params.ByName(`application`)
 
 	if !x.isAuthorized(&request) {
-		replyForbidden(&w, &request, nil)
+		x.replyForbidden(&w, &request, nil)
 		return
 	}
 
 	handler := x.handlerMap.Get(`registration_r`)
 	handler.Intake() <- request
 	result := <-request.Reply
-	respond(&w, &result)
+	x.respond(&w, &result)
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

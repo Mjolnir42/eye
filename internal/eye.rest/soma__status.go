@@ -22,7 +22,7 @@ import (
 
 // somaStatusUpdate encapsulates the handling of deployment feedback
 // notifications to SOMA
-func somaStatusUpdate(r *msg.Result) {
+func (x *Rest) somaStatusUpdate(r *msg.Result) {
 	if !r.Flags.SendDeploymentFeedback {
 		return
 	}

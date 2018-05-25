@@ -142,7 +142,7 @@ func (x *Rest) respondV1(w *http.ResponseWriter, r *msg.Result) {
 	}
 
 	if r.Flags.SendDeploymentFeedback {
-		go somaStatusUpdate(r)
+		go x.somaStatusUpdate(r)
 	}
 }
 
@@ -220,7 +220,7 @@ func (x *Rest) respondV2(w *http.ResponseWriter, r *msg.Result) {
 
 	// send deployment feedback to SOMA
 	if r.Flags.SendDeploymentFeedback {
-		go somaStatusUpdate(r)
+		go x.somaStatusUpdate(r)
 	}
 
 	if r.Flags.CacheInvalidation && !r.Flags.AlarmClearing {

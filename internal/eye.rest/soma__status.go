@@ -81,7 +81,6 @@ func (x *Rest) somaStatusUpdate(r *msg.Result) {
 
 	switch res.StatusCode() {
 	case http.StatusOK:
-		log.Println(`RequestID`, r.ID.String(), `DeploymentID`, r.Configuration[0].ID, `OK`)
 	default:
 		log.Println(`RequestID`, r.ID.String(), `DeploymentID`, r.Configuration[0].ID, res.StatusCode(), res.Status())
 	}

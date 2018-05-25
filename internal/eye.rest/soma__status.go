@@ -58,12 +58,12 @@ func (x *Rest) somaStatusUpdate(r *msg.Result) {
 		}).
 		// enter concurrency limit before performing request
 		OnBeforeRequest(func(cl *resty.Client, rq *resty.Request) error {
-			concurrenyLimit.Start()
+			x.limit.Start()
 			return nil
 		}).
 		// leave concurrency limit after receiving a response
 		OnAfterResponse(func(cl *resty.Client, rp *resty.Response) error {
-			concurrenyLimit.Done()
+			x.limit.Done()
 			return nil
 		}).
 		// clear timeout deadline after each request (http.Client

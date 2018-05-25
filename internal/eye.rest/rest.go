@@ -25,19 +25,14 @@ var ShutdownInProgress bool
 // Metrics is the map of runtime metric registries
 var Metrics = make(map[string]metrics.Registry)
 
-// concurrenyLimit caps the number of active outgoing HTTP requests
-var concurrenyLimit *limit.Limit
-
-func init() {
-	concurrenyLimit = limit.New(128)
-}
-
 // Rest holds the required state for the REST interface
 type Rest struct {
 	isAuthorized func(*msg.Request) bool
 	handlerMap   *eye.HandlerMap
 	conf         *erebos.Config
 	restricted   bool
+	// concurrenyLimit caps the number of active outgoing HTTP requests
+	limit *limit.Limit
 }
 
 // New returns a new REST interface
@@ -51,6 +46,7 @@ func New(
 	x.restricted = false
 	x.handlerMap = appHandlerMap
 	x.conf = conf
+	x.limit = limit.New(conf.Eye.ConcurrencyLimit)
 	return &x
 }
 

@@ -180,12 +180,12 @@ func (x *Rest) fetchPushDeployment(w *http.ResponseWriter, q *msg.Request) {
 	// without blocking the full handler within the limiter
 	done := make(chan struct{})
 	go func(sig chan struct{}, rp *resty.Response, addr string, e error) {
-		concurrenyLimit.Start()
+		x.limit.Start()
 
 		client := resty.New().SetTimeout(750 * time.Millisecond)
 		resp, err = client.R().Get(addr)
 
-		concurrenyLimit.Done()
+		x.limit.Done()
 		close(sig)
 	}(done, resp, detailsDownload, err)
 

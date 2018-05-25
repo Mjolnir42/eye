@@ -180,12 +180,40 @@ func (x *Rest) fetchPushDeployment(w *http.ResponseWriter, q *msg.Request) {
 	// without blocking the full handler within the limiter
 	done := make(chan struct{})
 	go func(sig chan struct{}, rp *resty.Response, addr string, e error) {
-		x.limit.Start()
+		resp, err = resty.New().
+			// set generic client options
+			SetDisableWarn(true).
+			SetHeader(`Content-Type`, `application/json`).
+			SetContentLength(true).
+			// follow redirects
+			SetRedirectPolicy(resty.FlexibleRedirectPolicy(5)).
+			// configure request retry
+			SetRetryCount(x.conf.Eye.RetryCount).
+			SetRetryWaitTime(time.Duration(x.conf.Eye.RetryMinWaitTime) * time.Millisecond).
+			SetRetryMaxWaitTime(time.Duration(x.conf.Eye.RetryMaxWaitTime) * time.Millisecond).
+			// reset timeout deadline before every request
+			OnBeforeRequest(func(cl *resty.Client, rq *resty.Request) error {
+				cl.SetTimeout(time.Duration(x.conf.Eye.RequestTimeout) * time.Millisecond)
+				return nil
+			}).
+			// enter concurrency limit before performing request
+			OnBeforeRequest(func(cl *resty.Client, rq *resty.Request) error {
+				x.limit.Start()
+				return nil
+			}).
+			// leave concurrency limit after receiving a response
+			OnAfterResponse(func(cl *resty.Client, rp *resty.Response) error {
+				x.limit.Done()
+				return nil
+			}).
+			// clear timeout deadline after each request (http.Client
+			// timeout also cancels reading the response body)
+			OnAfterResponse(func(cl *resty.Client, rp *resty.Response) error {
+				cl.SetTimeout(0)
+				return nil
+			}).
+			R().Get(addr)
 
-		client := resty.New().SetTimeout(750 * time.Millisecond)
-		resp, err = client.R().Get(addr)
-
-		x.limit.Done()
 		close(sig)
 	}(done, resp, detailsDownload, err)
 

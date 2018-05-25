@@ -56,6 +56,24 @@ type MetaInformation struct {
 	Tasks           []string `json:"tasks"`
 }
 
+// Snapshot is a Configuration at a specific point in time
+type Snapshot struct {
+	Valid      bool
+	ValidAt    string
+	HostID     uint64
+	ID         string
+	LookupID   string
+	Metric     string
+	Interval   uint64
+	Monitoring string
+	Oncall     string
+	Source     string
+	Tags       []string
+	Targethost string
+	Team       string
+	Thresholds []Threshold
+}
+
 // NewConfigurationRequest returns a new request
 func NewConfigurationRequest() Request {
 	return Request{
@@ -81,6 +99,35 @@ func (c *Configuration) InputSanatize() {
 		data.Info = MetaInformation{}
 		c.Data[i] = data
 	}
+}
+
+// At returns the configuration of c that was valid at ts with s.valid
+// set to true. If c contains no configuration data that was valid at ts
+// then s.valid is false.
+func (c *Configuration) At(ts time.Time) (s *Snapshot) {
+	s = &Snapshot{}
+
+dataloop:
+	for i := range c.Data {
+		if !c.Data[i].validate(ts) {
+			continue dataloop
+		}
+		s.Valid = true
+		s.ValidAt = ts.UTC().Format(TimeFormatString)
+		s.HostID = c.HostID
+		s.ID = c.ID
+		s.LookupID = c.LookupID
+		s.Metric = c.Metric
+		s.Interval = c.Data[i].Interval
+		s.Monitoring = c.Data[i].Monitoring
+		s.Oncall = c.Data[i].Oncall
+		s.Source = c.Data[i].Source
+		s.Tags = c.Data[i].Tags
+		s.Targethost = c.Data[i].Targethost
+		s.Team = c.Data[i].Team
+		s.Thresholds = c.Data[i].Thresholds
+	}
+	return
 }
 
 // validate returns the evaluation result of the following condition:

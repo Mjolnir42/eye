@@ -14,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mjolnir42/eye/internal/eye"
@@ -33,6 +34,11 @@ func (x *Rest) BasicAuth(h httprouter.Handle) httprouter.Handle {
 		ps = append(ps, httprouter.Param{
 			Key:   `RequestID`,
 			Value: requestID.String(),
+		})
+		requestTS := time.Now().UTC()
+		ps = append(ps, httprouter.Param{
+			Key:   `RequestTS`,
+			Value: requestTS.Format(time.RFC3339Nano),
 		})
 
 		// if the supervisor is not available, no requests are accepted

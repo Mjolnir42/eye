@@ -22,11 +22,10 @@ func (x *Rest) alarmSend(r *msg.Result) {
 	if !r.Flags.AlarmClearing {
 		return
 	}
-	now := time.Now().UTC()
 
 configurationloop:
 	for i := range r.Configuration {
-		snap := r.Configuration[i].At(now)
+		snap := r.Configuration[i].At(r.Time)
 		if !snap.Valid {
 			continue configurationloop
 		}

@@ -11,6 +11,7 @@ package rest // import "github.com/mjolnir42/eye/internal/eye.rest"
 
 import (
 	"net/http"
+	"text/template"
 
 	"github.com/mjolnir42/erebos"
 	"github.com/mjolnir42/eye/internal/eye"
@@ -33,6 +34,8 @@ type Rest struct {
 	restricted   bool
 	// concurrenyLimit caps the number of active outgoing HTTP requests
 	limit *limit.Limit
+	// notification template
+	tmpl *template.Template
 }
 
 // New returns a new REST interface
@@ -47,6 +50,7 @@ func New(
 	x.handlerMap = appHandlerMap
 	x.conf = conf
 	x.limit = limit.New(conf.Eye.ConcurrencyLimit)
+	x.tmpl = template.Must(template.ParseFiles(conf.Eye.AlarmTemplateFile))
 	return &x
 }
 

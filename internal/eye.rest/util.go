@@ -49,12 +49,6 @@ func decodeJSONBody(r *http.Request, s interface{}) (err error) {
 	return
 }
 
-// clearCamsAlarm sends a clear Alarm to CAMS for every Configuration
-// in res.Configuration
-func clearCamsAlarm(res *msg.Result) {
-	// XXX TODO
-}
-
 // processDeploymentDetails creates an eye protocol configuration from
 // SOMA deployment details
 func processDeploymentDetails(details *proto.Deployment) (string, v2.Configuration, error) {

@@ -235,9 +235,9 @@ func (x *Rest) respondV2(w *http.ResponseWriter, r *msg.Result) {
 		// performed
 	}
 
-	// send OK event to CAMS to clear alarmseries
+	// send notification alarm event
 	if r.Flags.AlarmClearing {
-		go clearCamsAlarm(r)
+		go x.alarmSend(r)
 	}
 
 	if bjson, err = json.Marshal(&protoRes); err != nil {

@@ -40,34 +40,51 @@ func (x *Rest) somaStatusUpdate(r *msg.Result) {
 
 	url := strings.Replace(r.FeedbackURL, `{STATUS}`, feedback, -1)
 
-	baseTimeout := 250
-	maxFeedbackAttempts := 5
-	client := resty.New()
-	success := false
-
-feedbackloop:
-	for i := 0; i < maxFeedbackAttempts; i++ {
-		<-time.After(time.Duration(i*baseTimeout) * time.Millisecond)
-
-		concurrenyLimit.Start()
-		client = client.SetTimeout(time.Duration((i+1)*baseTimeout) * time.Millisecond)
-		if res, err := client.R().Patch(url); err == nil {
+	client := resty.New().
+		// set generic client options
+		SetDisableWarn(true).
+		SetHeader(`Content-Type`, `application/json`).
+		SetContentLength(true).
+		// follow redirects
+		SetRedirectPolicy(resty.FlexibleRedirectPolicy(5)).
+		// configure request retry
+		SetRetryCount(x.conf.Eye.RetryCount).
+		SetRetryWaitTime(time.Duration(x.conf.Eye.RetryMinWaitTime) * time.Millisecond).
+		SetRetryMaxWaitTime(time.Duration(x.conf.Eye.RetryMaxWaitTime) * time.Millisecond).
+		// reset timeout deadline before every request
+		OnBeforeRequest(func(cl *resty.Client, rq *resty.Request) error {
+			cl.SetTimeout(time.Duration(x.conf.Eye.RequestTimeout) * time.Millisecond)
+			return nil
+		}).
+		// enter concurrency limit before performing request
+		OnBeforeRequest(func(cl *resty.Client, rq *resty.Request) error {
+			concurrenyLimit.Start()
+			return nil
+		}).
+		// leave concurrency limit after receiving a response
+		OnAfterResponse(func(cl *resty.Client, rp *resty.Response) error {
 			concurrenyLimit.Done()
+			return nil
+		}).
+		// clear timeout deadline after each request (http.Client
+		// timeout also cancels reading the response body)
+		OnAfterResponse(func(cl *resty.Client, rp *resty.Response) error {
+			cl.SetTimeout(0)
+			return nil
+		})
 
-			switch res.StatusCode() {
-			case http.StatusOK:
-				success = true
-				break feedbackloop
-			case http.StatusBadRequest:
-				// TODO log error, abort: no point resending bad requests
-				break feedbackloop
-			}
-		} else {
-			concurrenyLimit.Done()
-		}
+	res, err := client.R().Patch(url)
+	if err != nil {
+		log.Println(`RequestID`, r.ID.String(), `DeploymentID`, r.Configuration[0].ID, `Error`, err.Error())
+		return
 	}
 
-	log.Println(`RequestID`, r.ID.String(), `DeploymentID`, r.Configuration[0].ID, `Feedback Success`, success)
+	switch res.StatusCode() {
+	case http.StatusOK:
+		log.Println(`RequestID`, r.ID.String(), `DeploymentID`, r.Configuration[0].ID, `OK`)
+	default:
+		log.Println(`RequestID`, r.ID.String(), `DeploymentID`, r.Configuration[0].ID, res.StatusCode(), res.Status())
+	}
 }
 
 // somaSetFeedbackURL checks if the SendDeploymentFeedback flag is set

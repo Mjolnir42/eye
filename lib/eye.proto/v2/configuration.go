@@ -8,7 +8,11 @@
 
 package v2 // import "github.com/mjolnir42/eye/lib/eye.proto/v2"
 
-import "github.com/mjolnir42/eye/lib/eye.proto/v1"
+import (
+	"time"
+
+	"github.com/mjolnir42/eye/lib/eye.proto/v1"
+)
 
 // Configuration holds the monitoring profile definition for a check
 // that has to be performed
@@ -77,6 +81,18 @@ func (c *Configuration) InputSanatize() {
 		data.Info = MetaInformation{}
 		c.Data[i] = data
 	}
+}
+
+// validate returns the evaluation result of the following condition:
+//	d.Info.ValidFrom <= at <= d.Info.ValidUntil
+func (d *Data) validate(at time.Time) bool {
+	validFromTime := ParseValidity(d.Info.ValidFrom)
+	validUntilTime := ParseValidity(d.Info.ValidUntil)
+
+	return (at.UTC().Equal(validFromTime.UTC()) ||
+		at.UTC().After(validFromTime.UTC())) &&
+		(at.UTC().Equal(validUntilTime.UTC()) ||
+			at.UTC().Before(validUntilTime.UTC()))
 }
 
 // ConfigurationFromV1 converts configuration data between protocol

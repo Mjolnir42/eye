@@ -11,6 +11,7 @@ package msg // import "github.com/mjolnir42/eye/internal/eye.msg"
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 	uuid "github.com/satori/go.uuid"
@@ -20,6 +21,13 @@ import (
 // the ID consistent between all logs
 func requestID(params httprouter.Params) (id uuid.UUID) {
 	id, _ = uuid.FromString(params.ByName(`RequestID`))
+	return
+}
+
+// requestTS extracts the RequestTS set by Basic Authentication,
+// making the timestamp consistent between data structures
+func requestTS(params httprouter.Params) (ts time.Time) {
+	ts, _ = time.Parse(time.RFC3339Nano, params.ByName(`RequestTS`))
 	return
 }
 

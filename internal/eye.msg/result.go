@@ -12,6 +12,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 	uuid "github.com/satori/go.uuid"
@@ -20,6 +21,7 @@ import (
 // Result ...
 type Result struct {
 	ID      uuid.UUID
+	Time    time.Time
 	Section string
 	Action  string
 	Code    uint16
@@ -41,6 +43,7 @@ type Result struct {
 func FromRequest(rq *Request) Result {
 	return Result{
 		ID:                rq.ID,
+		Time:              rq.Time,
 		Section:           rq.Section,
 		Action:            rq.Action,
 		FeedbackURL:       rq.FeedbackURL,

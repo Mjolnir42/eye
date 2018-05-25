@@ -21,6 +21,7 @@ import (
 // Request represents the internal request metadata
 type Request struct {
 	ID           uuid.UUID
+	Time         time.Time
 	Section      string
 	Action       string
 	Version      int
@@ -71,6 +72,7 @@ func New(r *http.Request, params httprouter.Params) Request {
 	}
 	return Request{
 		ID:         requestID(params),
+		Time:       requestTS(params),
 		RemoteAddr: remoteAddr(r),
 		AuthUser:   authUser(params),
 		Reply:      returnChannel,

@@ -342,6 +342,21 @@ func (l *Lookup) processRequest(lookID string) (map[string]Threshold, error) {
 		}
 
 	case proto.ProtocolTwo:
+		res, err := l.v2LookupEye(lookID)
+		if err == ErrUnconfigured {
+			return nil, ErrUnconfigured
+		} else if err != nil {
+			return nil, err
+		}
+
+		// process result from eye and store in redis
+		thr, err = l.v2Process(lookID, res)
+		if err == ErrUnconfigured {
+			return nil, ErrUnconfigured
+		} else if err != nil {
+			return nil, err
+		}
+
 	default:
 		return nil, fmt.Errorf("eyewall.Lookup: attempted processing for unsupported API version %d", l.apiVersion)
 	}

@@ -55,6 +55,7 @@ type Lookup struct {
 	redis        *redis.Client
 	cacheTimeout time.Duration
 	apiVersion   int
+	eyeLookupURL *url.URL
 	client       *resty.Client
 }
 
@@ -203,6 +204,20 @@ versionloop:
 			l.apiVersion = apiVersion
 			break versionloop
 		}
+	}
+	switch l.apiVersion {
+	case proto.ProtocolOne:
+		l.eyeLookupURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v1/configuration/{lookID}",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+		))
+		foldSlashes(l.eyeLookupURL)
+	case proto.ProtocolTwo:
+		l.eyeLookupURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/lookup/configuration/{lookID}",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+		))
+		foldSlashes(l.eyeLookupURL)
 	}
 }
 

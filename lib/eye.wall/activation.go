@@ -12,7 +12,7 @@ import proto "github.com/mjolnir42/eye/lib/eye.proto"
 
 // Activate marks a profile as active if l detected an API version that
 // supports profile Activation
-func (l *Lookup) Activate(profileID string) {
+func (l *Lookup) Activate(profileID string) (err error) {
 	// apiVersion is not initialized, run a quick tasting
 	if l.apiVersion == proto.ProtocolInvalid {
 		l.taste(true)
@@ -20,8 +20,9 @@ func (l *Lookup) Activate(profileID string) {
 
 	switch l.apiVersion {
 	case proto.ProtocolTwo:
-		l.v2ActivateProfile(profileID)
+		err = l.v2ActivateProfile(profileID)
 	}
+	return
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

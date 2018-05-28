@@ -55,15 +55,39 @@ type Lookup struct {
 	redis        *redis.Client
 	cacheTimeout time.Duration
 	apiVersion   int
+	client       *resty.Client
 }
 
 // NewLookup returns a new *Lookup
 func NewLookup(conf *erebos.Config) *Lookup {
-	return &Lookup{
+	l := &Lookup{
 		Config: conf,
 		limit:  limit.New(conf.Eyewall.ConcurrencyLimit),
 		log:    nil,
 	}
+	l.client = resty.New().
+		SetHeader(`Content-Type`, `application/json`).
+		SetContentLength(true).
+		SetDisableWarn(true).
+		SetRedirectPolicy(resty.NoRedirectPolicy()).
+		SetRetryCount(0).
+		OnBeforeRequest(func(cl *resty.Client, rq *resty.Request) error {
+			cl.SetTimeout(150 * time.Millisecond)
+			return nil
+		}).
+		OnBeforeRequest(func(cl *resty.Client, rq *resty.Request) error {
+			l.limit.Start()
+			return nil
+		}).
+		OnAfterResponse(func(cl *resty.Client, rp *resty.Response) error {
+			l.limit.Done()
+			return nil
+		}).
+		OnAfterResponse(func(cl *resty.Client, rp *resty.Response) error {
+			cl.SetTimeout(0)
+			return nil
+		})
+	return l
 }
 
 // Start sets up Lookup and connects to Redis

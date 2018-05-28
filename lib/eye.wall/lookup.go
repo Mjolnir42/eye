@@ -24,6 +24,7 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/mjolnir42/erebos"
 	"github.com/mjolnir42/eye/lib/eye.proto/v1"
+	proto "github.com/mjolnir42/eye/lib/eye.proto"
 )
 
 var (
@@ -48,6 +49,7 @@ type Lookup struct {
 	log          *logrus.Logger
 	redis        *redis.Client
 	cacheTimeout time.Duration
+	apiVersion   int
 }
 
 // NewLookup returns a new *Lookup

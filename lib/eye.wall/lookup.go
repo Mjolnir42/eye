@@ -17,13 +17,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/go-redis/redis"
 	"github.com/mjolnir42/erebos"
-	"github.com/mjolnir42/eye/lib/eye.proto/v1"
 	proto "github.com/mjolnir42/eye/lib/eye.proto"
 )
 
@@ -163,22 +161,29 @@ func (l *Lookup) processRequest(lookID string) (map[string]Threshold, error) {
 		}
 	}
 
-	// local cache did not hit or was not available
-	// fetch from eye
-	cnf, err := l.lookupEye(lookID)
-	if err == ErrUnconfigured {
-		return nil, ErrUnconfigured
-	} else if err != nil {
-		return nil, err
+	switch l.apiVersion {
+	case proto.ProtocolInvalid:
+	case proto.ProtocolOne:
+		// local cache did not hit or was not available
+		// fetch from eye
+		cnf, err := l.v1LookupEye(lookID)
+		if err == ErrUnconfigured {
+			return nil, ErrUnconfigured
+		} else if err != nil {
+			return nil, err
+		}
+
+		// process result from eye and store in redis
+		thr, err = l.v1Process(lookID, cnf)
+		if err == ErrUnconfigured {
+			return nil, ErrUnconfigured
+		} else if err != nil {
+			return nil, err
+		}
+	case proto.ProtocolTwo:
+	default:
 	}
 
-	// process result from eye and store in redis
-	thr, err = l.process(lookID, cnf)
-	if err == ErrUnconfigured {
-		return nil, ErrUnconfigured
-	} else if err != nil {
-		return nil, err
-	}
 	return thr, nil
 }
 
@@ -210,84 +215,6 @@ dataloop:
 		if err != nil {
 			return nil, err
 		}
-		res[t.ID] = t
-	}
-	return res, nil
-}
-
-// lookupEye queries the Eye monitoring profile server
-func (l *Lookup) lookupEye(lookID string) (*v1.ConfigurationData, error) {
-	client := &http.Client{}
-	req, err := http.NewRequest(`GET`, fmt.Sprintf(
-		"http://%s:%s/%s/%s",
-		l.Config.Eyewall.Host,
-		l.Config.Eyewall.Port,
-		l.Config.Eyewall.Path,
-		lookID,
-	), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var resp *http.Response
-	defer resp.Body.Close()
-	if resp, err = client.Do(req); err != nil {
-		return nil, err
-	} else if resp.StatusCode == 400 {
-		return nil, fmt.Errorf(`Lookup: malformed LookupID`)
-	} else if resp.StatusCode == 404 {
-		l.setUnconfigured(lookID)
-		return nil, ErrUnconfigured
-	} else if resp.StatusCode >= 500 {
-		return nil, fmt.Errorf(
-			"Lookup: server error from eye: %d",
-			resp.StatusCode,
-		)
-	}
-	var buf []byte
-	buf, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	data := &v1.ConfigurationData{}
-	err = json.Unmarshal(buf, data)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
-}
-
-// process converts t into Threshold and stores it in the
-// local cache if available
-func (l *Lookup) process(lookID string, t *v1.ConfigurationData) (map[string]Threshold, error) {
-	if t.Configurations == nil {
-		return nil, fmt.Errorf(`lookup.process received t.Configurations == nil`)
-	}
-	if len(t.Configurations) == 0 {
-		l.setUnconfigured(lookID)
-		return nil, ErrUnconfigured
-	}
-	res := make(map[string]Threshold)
-	for _, i := range t.Configurations {
-		t := Threshold{
-			ID:             i.ConfigurationItemID,
-			Metric:         i.Metric,
-			HostID:         i.HostID,
-			Oncall:         i.Oncall,
-			Interval:       i.Interval,
-			MetaMonitoring: i.Metadata.Monitoring,
-			MetaTeam:       i.Metadata.Team,
-			MetaSource:     i.Metadata.Source,
-			MetaTargethost: i.Metadata.Targethost,
-		}
-		t.Thresholds = make(map[string]int64)
-		for _, tl := range i.Thresholds {
-			lvl := strconv.FormatUint(uint64(tl.Level), 10)
-			t.Predicate = tl.Predicate
-			t.Thresholds[lvl] = tl.Value
-		}
-		l.storeThreshold(lookID, &t)
 		res[t.ID] = t
 	}
 	return res, nil

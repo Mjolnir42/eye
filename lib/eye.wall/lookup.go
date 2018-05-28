@@ -33,6 +33,9 @@ var (
 	// ErrUnconfigured is returned when the cache contains a negative
 	// caching entry or Eye returns the absence of a profile to look up
 	ErrUnconfigured = errors.New("eyewall.Lookup: unconfigured")
+	// ErrUnavailable is returned when the cache does not contain the
+	// requested record and Eye can not be queried
+	ErrUnavailable = errors.New(`eyewall.Lookup: profile server unavailable`)
 	// beats is the map of heartbeats shared between all instances of
 	// Lookup. This way it can be ensured that all instances only move
 	// the timestamps forward in time.
@@ -257,6 +260,10 @@ func (l *Lookup) processRequest(lookID string) (map[string]Threshold, error) {
 
 	switch l.apiVersion {
 	case proto.ProtocolInvalid:
+		// apiVersion is still uninitialized, this is now a hard error
+		// since the cache does not have the required data and eye can
+		// not be queried
+		return nil, ErrUnavailable
 	case proto.ProtocolOne:
 		cnf, err := l.v1LookupEye(lookID)
 		if err == ErrUnconfigured {

@@ -56,6 +56,7 @@ type Lookup struct {
 	cacheTimeout time.Duration
 	apiVersion   int
 	eyeLookupURL *url.URL
+	eyeActiveURL *url.URL
 	client       *resty.Client
 }
 
@@ -218,6 +219,12 @@ versionloop:
 			l.Config.Eyewall.Port,
 		))
 		foldSlashes(l.eyeLookupURL)
+
+		l.eyeActiveURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/configuration/{profileID}/active",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+		))
+		foldSlashes(l.eyeActiveURL)
 	}
 }
 

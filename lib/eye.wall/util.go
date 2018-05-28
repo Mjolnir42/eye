@@ -9,8 +9,13 @@
 package wall // import "github.com/mjolnir42/eye/lib/eye.wall"
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 )
 
 // foldSlashes folds consecutive slashes in u.RequestURI
@@ -24,6 +29,32 @@ func foldSlashes(u *url.URL) {
 	) {
 		o = u.RequestURI()
 	}
+}
+
+// v2Result returns a deserialized v2.Result from a response body
+func v2Result(body []byte) (result *v2.Result, err error) {
+	if err = json.Unmarshal(body, result); err != nil {
+		return
+	}
+
+	switch result.StatusCode {
+	case http.StatusOK:
+		// success
+	case http.StatusNotFound:
+		result = nil
+		err = ErrUnconfigured
+	default:
+		// there was some error
+		result = nil
+		err = fmt.Errorf("eyewall.Lookup: eye(%s|%s) %d/%s: %v",
+			result.Section,
+			result.Action,
+			result.StatusCode,
+			result.StatusText,
+			result.Errors,
+		)
+	}
+	return
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

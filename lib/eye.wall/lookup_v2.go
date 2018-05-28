@@ -89,6 +89,7 @@ func (l *Lookup) v2Process(lookID string, pr *v2.Result) (map[string]Threshold, 
 			MetaSource:     i.Data[0].Source,
 			MetaTargethost: i.Data[0].Targethost,
 		}
+		l.v2UpdateCachedActivation(i.ID, i.ActivatedAt)
 
 		t.Thresholds = make(map[string]int64)
 		for _, tl := range i.Data[0].Thresholds {

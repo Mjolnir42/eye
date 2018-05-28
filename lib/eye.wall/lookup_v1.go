@@ -35,6 +35,7 @@ func (l *Lookup) v1LookupEye(lookID string) (*v1.ConfigurationData, error) {
 
 	var resp *http.Response
 	defer resp.Body.Close()
+	l.limit.Start()
 	if resp, err = client.Do(req); err != nil {
 		return nil, err
 	} else if resp.StatusCode == 400 {
@@ -48,6 +49,7 @@ func (l *Lookup) v1LookupEye(lookID string) (*v1.ConfigurationData, error) {
 			resp.StatusCode,
 		)
 	}
+	l.limit.Done()
 	var buf []byte
 	buf, err = ioutil.ReadAll(resp.Body)
 	if err != nil {

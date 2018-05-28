@@ -25,6 +25,7 @@ import (
 	"github.com/go-resty/resty"
 	"github.com/mjolnir42/erebos"
 	proto "github.com/mjolnir42/eye/lib/eye.proto"
+	"github.com/mjolnir42/limit"
 )
 
 var (
@@ -49,6 +50,7 @@ func init() {
 // Lookup provides a query library to retrieve data from Eye
 type Lookup struct {
 	Config       *erebos.Config
+	limit        *limit.Limit
 	log          *logrus.Logger
 	redis        *redis.Client
 	cacheTimeout time.Duration
@@ -59,6 +61,7 @@ type Lookup struct {
 func NewLookup(conf *erebos.Config) *Lookup {
 	return &Lookup{
 		Config: conf,
+		limit:  limit.New(conf.Eyewall.ConcurrencyLimit),
 		log:    nil,
 	}
 }
@@ -131,6 +134,16 @@ versionloop:
 			// reset timeout deadline before every request
 			OnBeforeRequest(func(cl *resty.Client, rq *resty.Request) error {
 				cl.SetTimeout(time.Duration(timeoutMS) * time.Millisecond)
+				return nil
+			}).
+			// enter concurrency limit before performing request
+			OnBeforeRequest(func(cl *resty.Client, rq *resty.Request) error {
+				l.limit.Start()
+				return nil
+			}).
+			// leave concurrency limit after receiving a response
+			OnAfterResponse(func(cl *resty.Client, rp *resty.Response) error {
+				l.limit.Done()
 				return nil
 			}).
 			// clear timeout deadline after each request (http.Client

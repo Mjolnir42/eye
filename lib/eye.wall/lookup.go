@@ -17,10 +17,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/go-redis/redis"
+	"github.com/go-resty/resty"
 	"github.com/mjolnir42/erebos"
 	proto "github.com/mjolnir42/eye/lib/eye.proto"
 )
@@ -60,6 +62,7 @@ func NewLookup(conf *erebos.Config) *Lookup {
 
 // Start sets up Lookup and connects to Redis
 func (l *Lookup) Start() error {
+	l.Taste()
 	l.cacheTimeout = time.Duration(
 		l.Config.Redis.CacheTimeout,
 	) * time.Second
@@ -77,6 +80,89 @@ func (l *Lookup) Start() error {
 // Close shuts down the Redis connection
 func (l *Lookup) Close() {
 	l.redis.Close()
+}
+
+// Taste connects to Eye and checks supported API versions
+func (l *Lookup) Taste() {
+	// use high timeout + retry variant for initial tasting
+	l.taste(false)
+}
+
+// taste connects to Eye and checks supported API versions. If quick is
+// set, no retries and shorter timeouts are used.
+func (l *Lookup) taste(quick bool) {
+	var retryCount, timeoutMS int
+	switch quick {
+	case true:
+		retryCount = 0
+		timeoutMS = 150
+	case false:
+		retryCount = 2
+		timeoutMS = 250
+	}
+
+versionloop:
+	// protocol version array is preference sorted, first hit wins
+	for _, apiVersion := range []int{proto.ProtocolTwo, proto.ProtocolOne} {
+		eyeURL, err := url.Parse(fmt.Sprintf("http://%s:%s/api?version=%d",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+			apiVersion,
+		))
+		if err != nil {
+			l.log.Fatalf("eyewall/cache: malformed eye URL: %s", err.Error())
+		}
+
+		foldSlashes(eyeURL)
+
+		resp, err := resty.New().
+			// set generic client options
+			SetHeader(`Content-Type`, `application/json`).
+			SetContentLength(true).
+			// follow redirects
+			SetRedirectPolicy(resty.FlexibleRedirectPolicy(5)).
+			// configure request retry
+			SetRetryCount(retryCount).
+			SetRetryWaitTime(500 * time.Millisecond).
+			SetRetryMaxWaitTime(3000 * time.Millisecond).
+			// reset timeout deadline before every request
+			OnBeforeRequest(func(cl *resty.Client, rq *resty.Request) error {
+				cl.SetTimeout(time.Duration(timeoutMS) * time.Millisecond)
+				return nil
+			}).
+			// clear timeout deadline after each request (http.Client
+			// timeout also cancels reading the response body)
+			OnAfterResponse(func(cl *resty.Client, rp *resty.Response) error {
+				cl.SetTimeout(0)
+				return nil
+			}).
+			R().Head(eyeURL.String())
+
+		// connection error to eye is NOT fatal, run against cache instead
+		if err != nil {
+			l.log.Errorf("eyewall/cache: %s", err.Error())
+			break versionloop // stop trying to find a different api version
+		}
+
+		switch resp.StatusCode() {
+		case http.StatusBadRequest: // 400
+			// unfixable at runtime and eyewall can not work without
+			// figuring out the API version
+			panic(`Eyewall received BadRequest response from Eye in response to API version testing. Can not continue.`)
+		case http.StatusNotImplemented: // 501
+			// queried protocol version is not supported
+			continue versionloop
+		case http.StatusNotFound: // 404
+			// eye is so old, it does not have the /api endpoint.
+			// This means it is only able to handle ProtocolOne
+			l.apiVersion = proto.ProtocolOne
+			break versionloop
+		case http.StatusNoContent: // 204
+			// queried version is supported
+			l.apiVersion = apiVersion
+			break versionloop
+		}
+	}
 }
 
 // SetLogger hands Lookup the logger to use
@@ -161,11 +247,17 @@ func (l *Lookup) processRequest(lookID string) (map[string]Threshold, error) {
 		}
 	}
 
+	// local cache did not hit or was not available
+	// fetch from eye
+
+	// apiVersion is not initialized, run a quick tasting
+	if l.apiVersion == proto.ProtocolInvalid {
+		l.taste(true)
+	}
+
 	switch l.apiVersion {
 	case proto.ProtocolInvalid:
 	case proto.ProtocolOne:
-		// local cache did not hit or was not available
-		// fetch from eye
 		cnf, err := l.v1LookupEye(lookID)
 		if err == ErrUnconfigured {
 			return nil, ErrUnconfigured

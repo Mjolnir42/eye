@@ -58,14 +58,16 @@ type Lookup struct {
 	eyeLookupURL *url.URL
 	eyeActiveURL *url.URL
 	client       *resty.Client
+	name         string
 }
 
 // NewLookup returns a new *Lookup
-func NewLookup(conf *erebos.Config) *Lookup {
+func NewLookup(conf *erebos.Config, appName string) *Lookup {
 	l := &Lookup{
 		Config: conf,
 		limit:  limit.New(conf.Eyewall.ConcurrencyLimit),
 		log:    nil,
+		name:   appName,
 	}
 	l.client = resty.New().
 		SetHeader(`Content-Type`, `application/json`).

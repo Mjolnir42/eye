@@ -60,6 +60,7 @@ type MetaInformation struct {
 type Snapshot struct {
 	Valid      bool
 	ValidAt    string
+	CurrentTS  string
 	HostID     uint64
 	ID         string
 	LookupID   string
@@ -114,6 +115,7 @@ dataloop:
 		}
 		s.Valid = true
 		s.ValidAt = ts.UTC().Format(TimeFormatString)
+		s.CurrentTS = time.Now().UTC().Format(TimeFormatString)
 		s.HostID = c.HostID
 		s.ID = c.ID
 		s.LookupID = c.LookupID

@@ -180,7 +180,14 @@ func (l *Lookup) GetConfigurationID(lookID string) ([]string, error) {
 
 	// try to serve the request from the local redis cache
 	thresh, err := l.processRequest(lookID)
-	if err == ErrUnconfigured {
+	switch err {
+	case nil:
+		// success
+	case ErrUnconfigured:
+		// lookID has negative cache entry
+		return IDList, ErrUnconfigured
+	default:
+		// genuine error condition
 		return IDList, err
 	}
 

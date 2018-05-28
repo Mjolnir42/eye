@@ -324,6 +324,7 @@ func (l *Lookup) processRequest(lookID string) (map[string]Threshold, error) {
 		// since the cache does not have the required data and eye can
 		// not be queried
 		return nil, ErrUnavailable
+
 	case proto.ProtocolOne:
 		cnf, err := l.v1LookupEye(lookID)
 		if err == ErrUnconfigured {
@@ -339,8 +340,10 @@ func (l *Lookup) processRequest(lookID string) (map[string]Threshold, error) {
 		} else if err != nil {
 			return nil, err
 		}
+
 	case proto.ProtocolTwo:
 	default:
+		return nil, fmt.Errorf("eyewall.Lookup: attempted processing for unsupported API version %d", l.apiVersion)
 	}
 
 	return thr, nil

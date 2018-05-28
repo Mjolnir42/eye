@@ -9,7 +9,6 @@
 package wall // import "github.com/mjolnir42/eye/lib/eye.wall"
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -22,6 +21,7 @@ import (
 func (l *Lookup) v2LookupEye(lookID string) (*v2.Result, error) {
 	var err error
 	var resp *resty.Response
+	var result *v2.Result
 
 	if resp, err = l.client.R().
 		SetPathParams(map[string]string{
@@ -32,37 +32,24 @@ func (l *Lookup) v2LookupEye(lookID string) (*v2.Result, error) {
 		return nil, fmt.Errorf("eyewall.Lookup: %s", err.Error())
 	}
 
-	// Protocol2 always responds 200 as HTTP code if the request could
-	// be routed to the application
 	switch resp.StatusCode() {
 	case http.StatusOK:
 	default:
 		return nil, fmt.Errorf("eyewall.Lookup: %s", resp.String())
 	}
 
-	result := &v2.Result{}
-	if err = json.Unmarshal(resp.Body(), result); err != nil {
-		return nil, fmt.Errorf("eyewall.Lookup: %s", err.Error())
-	}
-
-	switch result.StatusCode {
-	case http.StatusOK:
+	result, err = v2Result(resp.Body())
+	switch err {
+	case nil:
 		// success
-	case http.StatusNotFound:
+		return result, nil
+	case ErrUnconfigured:
 		// no profiles for lookID
 		l.setUnconfigured(lookID)
 		return nil, ErrUnconfigured
 	default:
-		// there was some error
-		return nil, fmt.Errorf("eyewall.Lookup: eye(%s|%s) %d/%s: %v",
-			result.Section,
-			result.Action,
-			result.StatusCode,
-			result.StatusText,
-			result.Errors,
-		)
+		return nil, fmt.Errorf("eyewall.Lookup: %s", err.Error())
 	}
-	return result, nil
 }
 
 // v2Process converts t into Threshold and stores it in the

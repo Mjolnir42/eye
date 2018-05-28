@@ -37,6 +37,8 @@ func v2Result(body []byte) (result *v2.Result, err error) {
 		return
 	}
 
+	// Protocol2 always responds 200 as HTTP code if the request could
+	// be routed to the application
 	switch result.StatusCode {
 	case http.StatusOK:
 		// success
@@ -46,7 +48,7 @@ func v2Result(body []byte) (result *v2.Result, err error) {
 	default:
 		// there was some error
 		result = nil
-		err = fmt.Errorf("eyewall.Lookup: eye(%s|%s) %d/%s: %v",
+		err = fmt.Errorf("eye(%s|%s) %d/%s: %v",
 			result.Section,
 			result.Action,
 			result.StatusCode,

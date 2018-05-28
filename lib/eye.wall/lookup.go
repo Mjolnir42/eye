@@ -149,6 +149,7 @@ versionloop:
 			// set generic client options
 			SetHeader(`Content-Type`, `application/json`).
 			SetContentLength(true).
+			SetDisableWarn(true).
 			// follow redirects
 			SetRedirectPolicy(resty.FlexibleRedirectPolicy(5)).
 			// configure request retry

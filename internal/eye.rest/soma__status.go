@@ -7,6 +7,7 @@
  */
 
 package rest // import "github.com/mjolnir42/eye/internal/eye.rest"
+
 import (
 	"fmt"
 	"log"

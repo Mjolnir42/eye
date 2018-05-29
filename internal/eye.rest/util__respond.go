@@ -169,6 +169,10 @@ func (x *Rest) respondV2(w *http.ResponseWriter, r *msg.Result) {
 		}
 	case msg.SectionRegistration:
 		protoRes = v2.NewRegistrationResult()
+
+		// update cache registry
+		x.eyewallCacheUnregister(r)
+		x.eyewallCacheRegister(r)
 	}
 	// record what was performed
 	protoRes.Section = r.Section
@@ -223,17 +227,8 @@ func (x *Rest) respondV2(w *http.ResponseWriter, r *msg.Result) {
 		go x.somaStatusUpdate(r)
 	}
 
-	if r.Flags.CacheInvalidation && !r.Flags.AlarmClearing {
-		// TODO: asynchronous active cache invalidation, since no
-		// clearing action depends on the invalidation having been
-		// performed
-	}
-
-	if r.Flags.CacheInvalidation && r.Flags.AlarmClearing {
-		// TODO:  synchronous active cache invalidation, since the
-		// clearing has to be blocked until the invalidation has been
-		// performed
-	}
+	// perform cache invalidation
+	x.eyewallCacheInvalidate(r)
 
 	// send notification alarm event
 	if r.Flags.AlarmClearing {

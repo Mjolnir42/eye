@@ -16,6 +16,7 @@ import (
 	"github.com/mjolnir42/erebos"
 	"github.com/mjolnir42/eye/internal/eye"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
+	wall "github.com/mjolnir42/eye/lib/eye.wall"
 	"github.com/mjolnir42/limit"
 	metrics "github.com/rcrowley/go-metrics"
 )
@@ -36,6 +37,8 @@ type Rest struct {
 	limit *limit.Limit
 	// notification template
 	tmpl *template.Template
+	// cache invalidator
+	invl *wall.Invalidation
 }
 
 // New returns a new REST interface
@@ -51,6 +54,7 @@ func New(
 	x.conf = conf
 	x.limit = limit.New(conf.Eye.ConcurrencyLimit)
 	x.tmpl = template.Must(template.ParseFiles(conf.Eye.AlarmTemplateFile))
+	x.invl = wall.NewInvalidation(conf)
 	return &x
 }
 

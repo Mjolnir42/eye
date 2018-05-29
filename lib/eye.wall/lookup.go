@@ -17,13 +17,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strconv"
+	"net/url"
 	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/go-redis/redis"
+	"github.com/go-resty/resty"
 	"github.com/mjolnir42/erebos"
-	"github.com/mjolnir42/eye/lib/eye.proto/v1"
+	proto "github.com/mjolnir42/eye/lib/eye.proto"
+	"github.com/mjolnir42/limit"
 )
 
 var (
@@ -32,6 +34,9 @@ var (
 	// ErrUnconfigured is returned when the cache contains a negative
 	// caching entry or Eye returns the absence of a profile to look up
 	ErrUnconfigured = errors.New("eyewall.Lookup: unconfigured")
+	// ErrUnavailable is returned when the cache does not contain the
+	// requested record and Eye can not be queried
+	ErrUnavailable = errors.New(`eyewall.Lookup: profile server unavailable`)
 	// beats is the map of heartbeats shared between all instances of
 	// Lookup. This way it can be ensured that all instances only move
 	// the timestamps forward in time.
@@ -45,21 +50,56 @@ func init() {
 // Lookup provides a query library to retrieve data from Eye
 type Lookup struct {
 	Config       *erebos.Config
+	limit        *limit.Limit
 	log          *logrus.Logger
 	redis        *redis.Client
 	cacheTimeout time.Duration
+	apiVersion   int
+	eyeLookupURL *url.URL
+	eyeActiveURL *url.URL
+	eyeRegAddURL *url.URL
+	eyeRegDelURL *url.URL
+	client       *resty.Client
+	name         string
+	registration string
 }
 
 // NewLookup returns a new *Lookup
-func NewLookup(conf *erebos.Config) *Lookup {
-	return &Lookup{
+func NewLookup(conf *erebos.Config, appName string) *Lookup {
+	l := &Lookup{
 		Config: conf,
+		limit:  limit.New(conf.Eyewall.ConcurrencyLimit),
 		log:    nil,
+		name:   appName,
 	}
+	l.client = resty.New().
+		SetHeader(`Content-Type`, `application/json`).
+		SetContentLength(true).
+		SetDisableWarn(true).
+		SetRedirectPolicy(resty.NoRedirectPolicy()).
+		SetRetryCount(0).
+		OnBeforeRequest(func(cl *resty.Client, rq *resty.Request) error {
+			cl.SetTimeout(150 * time.Millisecond)
+			return nil
+		}).
+		OnBeforeRequest(func(cl *resty.Client, rq *resty.Request) error {
+			l.limit.Start()
+			return nil
+		}).
+		OnAfterResponse(func(cl *resty.Client, rp *resty.Response) error {
+			l.limit.Done()
+			return nil
+		}).
+		OnAfterResponse(func(cl *resty.Client, rp *resty.Response) error {
+			cl.SetTimeout(0)
+			return nil
+		})
+	return l
 }
 
 // Start sets up Lookup and connects to Redis
 func (l *Lookup) Start() error {
+	l.Taste()
 	l.cacheTimeout = time.Duration(
 		l.Config.Redis.CacheTimeout,
 	) * time.Second
@@ -71,12 +111,139 @@ func (l *Lookup) Start() error {
 	if _, err := l.redis.Ping().Result(); err != nil {
 		return err
 	}
-	return nil
+	return l.Register()
 }
 
 // Close shuts down the Redis connection
 func (l *Lookup) Close() {
 	l.redis.Close()
+	l.Unregister()
+}
+
+// Taste connects to Eye and checks supported API versions
+func (l *Lookup) Taste() {
+	// use high timeout + retry variant for initial tasting
+	l.taste(false)
+}
+
+// taste connects to Eye and checks supported API versions. If quick is
+// set, no retries and shorter timeouts are used.
+func (l *Lookup) taste(quick bool) {
+	var retryCount, timeoutMS int
+	switch quick {
+	case true:
+		retryCount = 0
+		timeoutMS = 150
+	case false:
+		retryCount = 2
+		timeoutMS = 250
+	}
+
+versionloop:
+	// protocol version array is preference sorted, first hit wins
+	for _, apiVersion := range []int{proto.ProtocolTwo, proto.ProtocolOne} {
+		eyeURL, err := url.Parse(fmt.Sprintf("http://%s:%s/api?version=%d",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+			apiVersion,
+		))
+		if err != nil {
+			l.log.Fatalf("eyewall/cache: malformed eye URL: %s", err.Error())
+		}
+
+		foldSlashes(eyeURL)
+
+		resp, err := resty.New().
+			// set generic client options
+			SetHeader(`Content-Type`, `application/json`).
+			SetContentLength(true).
+			SetDisableWarn(true).
+			// follow redirects
+			SetRedirectPolicy(resty.FlexibleRedirectPolicy(5)).
+			// configure request retry
+			SetRetryCount(retryCount).
+			SetRetryWaitTime(500 * time.Millisecond).
+			SetRetryMaxWaitTime(3000 * time.Millisecond).
+			// reset timeout deadline before every request
+			OnBeforeRequest(func(cl *resty.Client, rq *resty.Request) error {
+				cl.SetTimeout(time.Duration(timeoutMS) * time.Millisecond)
+				return nil
+			}).
+			// enter concurrency limit before performing request
+			OnBeforeRequest(func(cl *resty.Client, rq *resty.Request) error {
+				l.limit.Start()
+				return nil
+			}).
+			// leave concurrency limit after receiving a response
+			OnAfterResponse(func(cl *resty.Client, rp *resty.Response) error {
+				l.limit.Done()
+				return nil
+			}).
+			// clear timeout deadline after each request (http.Client
+			// timeout also cancels reading the response body)
+			OnAfterResponse(func(cl *resty.Client, rp *resty.Response) error {
+				cl.SetTimeout(0)
+				return nil
+			}).
+			R().Head(eyeURL.String())
+
+		// connection error to eye is NOT fatal, run against cache instead
+		if err != nil {
+			l.log.Errorf("eyewall/cache: %s", err.Error())
+			break versionloop // stop trying to find a different api version
+		}
+
+		switch resp.StatusCode() {
+		case http.StatusBadRequest: // 400
+			// unfixable at runtime and eyewall can not work without
+			// figuring out the API version
+			panic(`Eyewall received BadRequest response from Eye in response to API version testing. Can not continue.`)
+		case http.StatusNotImplemented: // 501
+			// queried protocol version is not supported
+			continue versionloop
+		case http.StatusNotFound: // 404
+			// eye is so old, it does not have the /api endpoint.
+			// This means it is only able to handle ProtocolOne
+			l.apiVersion = proto.ProtocolOne
+			break versionloop
+		case http.StatusNoContent: // 204
+			// queried version is supported
+			l.apiVersion = apiVersion
+			break versionloop
+		}
+	}
+	switch l.apiVersion {
+	case proto.ProtocolOne:
+		l.eyeLookupURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v1/configuration/{lookID}",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+		))
+		foldSlashes(l.eyeLookupURL)
+	case proto.ProtocolTwo:
+		l.eyeLookupURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/lookup/configuration/{lookID}",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+		))
+		foldSlashes(l.eyeLookupURL)
+
+		l.eyeActiveURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/configuration/{profileID}/active",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+		))
+		foldSlashes(l.eyeActiveURL)
+
+		l.eyeRegAddURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/registration/",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+		))
+		foldSlashes(l.eyeRegAddURL)
+
+		l.eyeRegDelURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/registration/{registrationID}",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+		))
+		foldSlashes(l.eyeRegDelURL)
+	}
 }
 
 // SetLogger hands Lookup the logger to use
@@ -91,7 +258,14 @@ func (l *Lookup) GetConfigurationID(lookID string) ([]string, error) {
 
 	// try to serve the request from the local redis cache
 	thresh, err := l.processRequest(lookID)
-	if err == ErrUnconfigured {
+	switch err {
+	case nil:
+		// success
+	case ErrUnconfigured:
+		// lookID has negative cache entry
+		return IDList, ErrUnconfigured
+	default:
+		// genuine error condition
 		return IDList, err
 	}
 
@@ -163,20 +337,55 @@ func (l *Lookup) processRequest(lookID string) (map[string]Threshold, error) {
 
 	// local cache did not hit or was not available
 	// fetch from eye
-	cnf, err := l.lookupEye(lookID)
-	if err == ErrUnconfigured {
-		return nil, ErrUnconfigured
-	} else if err != nil {
-		return nil, err
+
+	// apiVersion is not initialized, run a quick tasting
+	if l.apiVersion == proto.ProtocolInvalid {
+		l.taste(true)
 	}
 
-	// process result from eye and store in redis
-	thr, err = l.process(lookID, cnf)
-	if err == ErrUnconfigured {
-		return nil, ErrUnconfigured
-	} else if err != nil {
-		return nil, err
+	switch l.apiVersion {
+	case proto.ProtocolInvalid:
+		// apiVersion is still uninitialized, this is now a hard error
+		// since the cache does not have the required data and eye can
+		// not be queried
+		return nil, ErrUnavailable
+
+	case proto.ProtocolOne:
+		cnf, err := l.v1LookupEye(lookID)
+		if err == ErrUnconfigured {
+			return nil, ErrUnconfigured
+		} else if err != nil {
+			return nil, err
+		}
+
+		// process result from eye and store in redis
+		thr, err = l.v1Process(lookID, cnf)
+		if err == ErrUnconfigured {
+			return nil, ErrUnconfigured
+		} else if err != nil {
+			return nil, err
+		}
+
+	case proto.ProtocolTwo:
+		res, err := l.v2LookupEye(lookID)
+		if err == ErrUnconfigured {
+			return nil, ErrUnconfigured
+		} else if err != nil {
+			return nil, err
+		}
+
+		// process result from eye and store in redis
+		thr, err = l.v2Process(lookID, res)
+		if err == ErrUnconfigured {
+			return nil, ErrUnconfigured
+		} else if err != nil {
+			return nil, err
+		}
+
+	default:
+		return nil, fmt.Errorf("eyewall.Lookup: attempted processing for unsupported API version %d", l.apiVersion)
 	}
+
 	return thr, nil
 }
 
@@ -208,84 +417,6 @@ dataloop:
 		if err != nil {
 			return nil, err
 		}
-		res[t.ID] = t
-	}
-	return res, nil
-}
-
-// lookupEye queries the Eye monitoring profile server
-func (l *Lookup) lookupEye(lookID string) (*v1.ConfigurationData, error) {
-	client := &http.Client{}
-	req, err := http.NewRequest(`GET`, fmt.Sprintf(
-		"http://%s:%s/%s/%s",
-		l.Config.Eyewall.Host,
-		l.Config.Eyewall.Port,
-		l.Config.Eyewall.Path,
-		lookID,
-	), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var resp *http.Response
-	defer resp.Body.Close()
-	if resp, err = client.Do(req); err != nil {
-		return nil, err
-	} else if resp.StatusCode == 400 {
-		return nil, fmt.Errorf(`Lookup: malformed LookupID`)
-	} else if resp.StatusCode == 404 {
-		l.setUnconfigured(lookID)
-		return nil, ErrUnconfigured
-	} else if resp.StatusCode >= 500 {
-		return nil, fmt.Errorf(
-			"Lookup: server error from eye: %d",
-			resp.StatusCode,
-		)
-	}
-	var buf []byte
-	buf, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	data := &v1.ConfigurationData{}
-	err = json.Unmarshal(buf, data)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
-}
-
-// process converts t into Threshold and stores it in the
-// local cache if available
-func (l *Lookup) process(lookID string, t *v1.ConfigurationData) (map[string]Threshold, error) {
-	if t.Configurations == nil {
-		return nil, fmt.Errorf(`lookup.process received t.Configurations == nil`)
-	}
-	if len(t.Configurations) == 0 {
-		l.setUnconfigured(lookID)
-		return nil, ErrUnconfigured
-	}
-	res := make(map[string]Threshold)
-	for _, i := range t.Configurations {
-		t := Threshold{
-			ID:             i.ConfigurationItemID,
-			Metric:         i.Metric,
-			HostID:         i.HostID,
-			Oncall:         i.Oncall,
-			Interval:       i.Interval,
-			MetaMonitoring: i.Metadata.Monitoring,
-			MetaTeam:       i.Metadata.Team,
-			MetaSource:     i.Metadata.Source,
-			MetaTargethost: i.Metadata.Targethost,
-		}
-		t.Thresholds = make(map[string]int64)
-		for _, tl := range i.Thresholds {
-			lvl := strconv.FormatUint(uint64(tl.Level), 10)
-			t.Predicate = tl.Predicate
-			t.Thresholds[lvl] = tl.Value
-		}
-		l.storeThreshold(lookID, &t)
 		res[t.ID] = t
 	}
 	return res, nil

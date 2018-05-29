@@ -57,8 +57,11 @@ type Lookup struct {
 	apiVersion   int
 	eyeLookupURL *url.URL
 	eyeActiveURL *url.URL
+	eyeRegAddURL *url.URL
+	eyeRegDelURL *url.URL
 	client       *resty.Client
 	name         string
+	registration string
 }
 
 // NewLookup returns a new *Lookup
@@ -108,12 +111,13 @@ func (l *Lookup) Start() error {
 	if _, err := l.redis.Ping().Result(); err != nil {
 		return err
 	}
-	return nil
+	return l.Register()
 }
 
 // Close shuts down the Redis connection
 func (l *Lookup) Close() {
 	l.redis.Close()
+	l.Unregister()
 }
 
 // Taste connects to Eye and checks supported API versions
@@ -227,6 +231,18 @@ versionloop:
 			l.Config.Eyewall.Port,
 		))
 		foldSlashes(l.eyeActiveURL)
+
+		l.eyeRegAddURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/registration/",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+		))
+		foldSlashes(l.eyeRegAddURL)
+
+		l.eyeRegDelURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/registration/{registrationID}",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+		))
+		foldSlashes(l.eyeRegDelURL)
 	}
 }
 

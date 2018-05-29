@@ -35,14 +35,7 @@ SELECT $1::uuid,
        $2::varchar,
        $3::inet,
        $4::numeric,
-       $5::numeric
-WHERE  NOT EXISTS (
-       SELECT registrationID
-       FROM   eye.registry
-       WHERE  application = $2::varchar
-         AND  address     = $3::inet
-         AND  port        = $4::numeric
-         AND  database    = $5::numeric);`
+       $5::numeric;`
 
 	RegistryDel = `
 DELETE FROM eye.registry

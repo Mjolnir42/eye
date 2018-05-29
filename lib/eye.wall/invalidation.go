@@ -30,7 +30,7 @@ func NewInvalidation(conf *erebos.Config) (iv *Invalidation) {
 	return
 }
 
-// Register ...
+// Register adds a new cache to the registry
 func (iv *Invalidation) Register(regID, addr string, port, db int64) (err error) {
 	iv.Lock()
 	defer iv.Unlock()
@@ -45,6 +45,14 @@ func (iv *Invalidation) Register(regID, addr string, port, db int64) (err error)
 	}
 	iv.Registry[regID] = cl
 	return
+}
+
+// Unregister deletes a cache from the registry
+func (iv *Invalidation) Unregister(regID string) {
+	iv.Lock()
+	iv.Registry[regID].Close()
+	delete(iv.Registry, regID)
+	iv.Unlock()
 }
 
 // CloseAll closes all active redis clients in iv.Registry

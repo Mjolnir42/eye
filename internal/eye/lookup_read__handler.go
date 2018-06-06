@@ -32,8 +32,8 @@ func (r *LookupRead) Run() {
 	var err error
 
 	for statement, prepStmt := range map[string]*sql.Stmt{
-		stmt.LookupConfiguration: r.stmtCfgLookup,
 		stmt.LookupActivation:    r.stmtActivation,
+		stmt.LookupConfiguration: r.stmtCfgLookup,
 		stmt.LookupPending:       r.stmtPending,
 	} {
 		if prepStmt, err = r.conn.Prepare(statement); err != nil {

@@ -23,13 +23,14 @@ import (
 
 // LookupRead handles read requests for hash lookups
 type LookupRead struct {
-	Input         chan msg.Request
-	Shutdown      chan struct{}
-	conn          *sql.DB
-	stmtCfgLookup *sql.Stmt
-	appLog        *logrus.Logger
-	reqLog        *logrus.Logger
-	errLog        *logrus.Logger
+	Input          chan msg.Request
+	Shutdown       chan struct{}
+	conn           *sql.DB
+	stmtCfgLookup  *sql.Stmt
+	stmtActivation *sql.Stmt
+	appLog         *logrus.Logger
+	reqLog         *logrus.Logger
+	errLog         *logrus.Logger
 }
 
 // newLookupRead return a new LookupRead handler with input buffer of length
@@ -47,6 +48,8 @@ func (r *LookupRead) process(q *msg.Request) {
 	switch q.Action {
 	case msg.ActionConfiguration:
 		r.configuration(q, &result)
+	case msg.ActionActivation:
+		r.activation(q, &result)
 	default:
 		result.UnknownRequest(q)
 	}
@@ -133,6 +136,63 @@ func (r *LookupRead) configuration(q *msg.Request, mr *msg.Result) {
 			"Lookup for hash %s matched no configurations",
 			q.LookupHash,
 		))
+		return
+	}
+	mr.OK()
+}
+
+// activation returns all configurations that have been activated after
+// q.Search.Since
+func (r *LookupRead) activation(q *msg.Request, mr *msg.Result) {
+	var (
+		rows                                          *sql.Rows
+		err                                           error
+		configurationID, lookupID, dataID, confResult string
+		activatedAt, validFrom, validUntil            time.Time
+	)
+
+	if rows, err = r.stmtActivation.Query(
+		q.Search.Since.UTC().Format(time.RFC3339Nano),
+	); err != nil {
+		mr.ServerError(err)
+		return
+	}
+
+	for rows.Next() {
+		if err = rows.Scan(
+			&configurationID,
+			&activatedAt,
+			&lookupID,
+			&dataID,
+			&validFrom,
+			&validUntil,
+			&confResult,
+		); err != nil {
+			rows.Close()
+			mr.ServerError(err)
+			return
+		}
+		configuration := v2.Configuration{}
+		data := v2.Data{}
+		if err = json.Unmarshal([]byte(confResult), &configuration); err != nil {
+			rows.Close()
+			mr.ServerError(err)
+			return
+		}
+		configuration.ActivatedAt = activatedAt.Format(RFC3339Milli)
+		configuration.LookupID = lookupID
+		data = configuration.Data[0]
+		data.ID = dataID
+		data.Info = v2.MetaInformation{
+			ValidFrom:  v2.FormatValidity(validFrom),
+			ValidUntil: v2.FormatValidity(validUntil),
+		}
+		configuration.Data = []v2.Data{data}
+
+		mr.Configuration = append(mr.Configuration, configuration)
+	}
+	if err = rows.Err(); err != nil {
+		mr.ServerError(err)
 		return
 	}
 	mr.OK()

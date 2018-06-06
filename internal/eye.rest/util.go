@@ -20,9 +20,11 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/asaskevich/govalidator"
 	msg "github.com/mjolnir42/eye/internal/eye.msg"
+	eyeproto "github.com/mjolnir42/eye/lib/eye.proto"
 	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 	"github.com/mjolnir42/soma/lib/proto"
 )
@@ -271,6 +273,21 @@ func foldSlashes(u *url.URL) {
 	) {
 		o = u.RequestURI()
 	}
+}
+
+// stringToTime attempts to parse timestring s into t
+func stringToTime(s string, t *time.Time) (err error) {
+	for _, format := range []string{
+		time.RFC3339,
+		eyeproto.RFC3339Milli,
+		time.RFC3339Nano,
+	} {
+		if *t, err = time.Parse(format, s); err == nil {
+			// return the string could be successfully parsed
+			return
+		}
+	}
+	return
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

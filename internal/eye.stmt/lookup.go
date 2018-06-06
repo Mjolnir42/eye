@@ -46,9 +46,26 @@ WHERE  NOT EXISTS (
        FROM   eye.lookup
        WHERE  lookupID = $1::varchar
           OR  ( hostID = $2::numeric AND metric = $3::text));`
+
+	LookupActivation = `
+SELECT a.configurationID,
+       a.activatedAt,
+       c.lookupID,
+       d.dataID,
+       lower(d.validity),
+       upper(d.validity),
+       configuration
+FROM   eye.activations a
+JOIN   eye.configurations c
+  ON   a.configurationID = c.configurationID
+JOIN   eye.configurations_data d
+  ON   c.configurationID = d.configurationID
+WHERE  d.validity @> NOW()::timestamptz
+  AND  a.activatedAt >= $1::timestamptz;`
 )
 
 func init() {
+	m[LookupActivation] = `LookupActivation`
 	m[LookupConfiguration] = `LookupConfiguration`
 	m[LookupAdd] = `LookupAdd`
 }

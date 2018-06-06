@@ -58,6 +58,7 @@ type Search struct {
 	Registration  v2.Registration
 	Configuration v2.Configuration
 	ValidAt       time.Time
+	Since         time.Time
 }
 
 // New returns a Request

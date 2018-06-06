@@ -15,4 +15,8 @@ const (
 	ProtocolTwo
 )
 
+// RFC3339Milli is a millisecond precision RFC3339 timestamp format
+// definition
+const RFC3339Milli string = "2006-01-02T15:04:05.000Z07:00"
+
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

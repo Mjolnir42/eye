@@ -27,6 +27,7 @@ func (x *Rest) setupRouter() *httprouter.Router {
 	router.GET(`/api/v2/configuration/`, x.Verify(x.ConfigurationList))
 	router.GET(`/api/v2/lookup/configuration/:hash`, x.Verify(x.LookupConfiguration))
 	router.GET(`/api/v2/lookup/registration/:application`, x.Verify(x.LookupRegistration))
+	router.GET(`/api/v2/lookup/activation/`, x.Verify(x.LookupActivation))
 	router.GET(`/api/v2/registration/:ID`, x.Verify(x.RegistrationShow))
 	router.GET(`/api/v2/registration/`, x.Verify(x.RegistrationList))
 	router.HEAD(`/api`, x.VersionInfo)

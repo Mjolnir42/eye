@@ -25,7 +25,7 @@ type ConfigurationWrite struct {
 	Input                       chan msg.Request
 	Shutdown                    chan struct{}
 	conn                        *sql.DB
-	stmtNewLookupAdd            *sql.Stmt
+	stmtLookupAddID             *sql.Stmt
 	stmtCfgAddID                *sql.Stmt
 	stmtCfgSelectValidForUpdate *sql.Stmt
 	stmtCfgDataUpdateValidity   *sql.Stmt
@@ -106,7 +106,7 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 	}
 
 	// Register lookup hash
-	if res, err = tx.Stmt(w.stmtNewLookupAdd).Exec(
+	if res, err = tx.Stmt(w.stmtLookupAddID).Exec(
 		q.LookupHash,
 		int(q.Configuration.HostID),
 		q.Configuration.Metric,

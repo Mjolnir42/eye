@@ -8,12 +8,12 @@
 
 package stmt // import "github.com/mjolnir42/eye/internal/eye.stmt"
 
-// LookupStatements contains the SQL statements related to configuration
-// search via hash
+// LookupStatements contains the SQL statements related to lookup
+// requests
 const (
 	LookupStatements = ``
 
-	NewLookupSearch = `
+	LookupConfiguration = `
 SELECT    c.configurationID,
           d.dataID,
           lower(d.validity),
@@ -33,7 +33,7 @@ LEFT JOIN eye.activations AS a
 WHERE     c.lookupID = $1::varchar
   AND     d.validity @> NOW()::timestamptz;`
 
-	NewLookupAdd = `
+	LookupAdd = `
 INSERT INTO eye.lookup (
             lookupID,
             hostID,
@@ -49,8 +49,8 @@ WHERE  NOT EXISTS (
 )
 
 func init() {
-	m[NewLookupSearch] = `NewLookupSearch`
-	m[NewLookupAdd] = `NewLookupAdd`
+	m[LookupConfiguration] = `LookupConfiguration`
+	m[LookupAdd] = `LookupAdd`
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

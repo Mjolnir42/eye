@@ -51,6 +51,7 @@ type Flags struct {
 	CacheInvalidation      bool
 	SendDeploymentFeedback bool
 	ResetActivation        bool
+	Pending                bool
 }
 
 // Search contains search paramaters for this request

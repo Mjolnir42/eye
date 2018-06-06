@@ -28,6 +28,7 @@ type LookupRead struct {
 	conn           *sql.DB
 	stmtCfgLookup  *sql.Stmt
 	stmtActivation *sql.Stmt
+	stmtPending    *sql.Stmt
 	appLog         *logrus.Logger
 	reqLog         *logrus.Logger
 	errLog         *logrus.Logger
@@ -50,6 +51,8 @@ func (r *LookupRead) process(q *msg.Request) {
 		r.configuration(q, &result)
 	case msg.ActionActivation:
 		r.activation(q, &result)
+	case msg.ActionPending:
+		r.pending(q, &result)
 	default:
 		result.UnknownRequest(q)
 	}
@@ -186,6 +189,56 @@ func (r *LookupRead) activation(q *msg.Request, mr *msg.Result) {
 		data.Info = v2.MetaInformation{
 			ValidFrom:  v2.FormatValidity(validFrom),
 			ValidUntil: v2.FormatValidity(validUntil),
+		}
+		configuration.Data = []v2.Data{data}
+
+		mr.Configuration = append(mr.Configuration, configuration)
+	}
+	if err = rows.Err(); err != nil {
+		mr.ServerError(err)
+		return
+	}
+	mr.OK()
+}
+
+// pending returns all configurations that have been provisioned but not
+// yet activated
+func (r *LookupRead) pending(q *msg.Request, mr *msg.Result) {
+	var (
+		rows                        *sql.Rows
+		err                         error
+		configurationID, confResult string
+		provisionedAt               time.Time
+	)
+
+	if rows, err = r.stmtPending.Query(
+		q.Search.Since.UTC().Format(time.RFC3339Nano),
+	); err != nil {
+		mr.ServerError(err)
+		return
+	}
+
+	for rows.Next() {
+		if err = rows.Scan(
+			&configurationID,
+			&provisionedAt,
+			&confResult,
+		); err != nil {
+			rows.Close()
+			mr.ServerError(err)
+			return
+		}
+		configuration := v2.Configuration{}
+		data := v2.Data{}
+		if err = json.Unmarshal([]byte(confResult), &configuration); err != nil {
+			rows.Close()
+			mr.ServerError(err)
+			return
+		}
+		configuration.ActivatedAt = `never`
+		data = configuration.Data[0]
+		data.Info = v2.MetaInformation{
+			ProvisionedAt: v2.FormatProvision(provisionedAt),
 		}
 		configuration.Data = []v2.Data{data}
 

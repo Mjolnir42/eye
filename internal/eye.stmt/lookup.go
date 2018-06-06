@@ -62,12 +62,28 @@ JOIN   eye.configurations_data d
   ON   c.configurationID = d.configurationID
 WHERE  d.validity @> NOW()::timestamptz
   AND  a.activatedAt >= $1::timestamptz;`
+
+	LookupPending = `
+SELECT     p.configurationID,
+           lower(p.provision_period),
+           d.configuration
+FROM       eye.provisions p
+LEFT OUTER
+      JOIN eye.activations a
+        ON p.configurationID = a.configurationID
+JOIN       eye.configurations_data d
+        ON p.dataID = d.dataID
+       AND p.configurationID = d.configurationID
+WHERE      p.provision_period @> NOW()::timestamptz
+       AND a.configurationID IS NULL
+       AND lower(p.provision_period) >= $1::timestamptz;`
 )
 
 func init() {
 	m[LookupActivation] = `LookupActivation`
 	m[LookupAddID] = `LookupAddID`
 	m[LookupConfiguration] = `LookupConfiguration`
+	m[LookupPending] = `LookupPending`
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

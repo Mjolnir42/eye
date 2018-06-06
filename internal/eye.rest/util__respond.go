@@ -162,9 +162,7 @@ func (x *Rest) respondV2(w *http.ResponseWriter, r *msg.Result) {
 		protoRes = v2.NewConfigurationResult()
 	case msg.SectionLookup:
 		switch r.Action {
-		case msg.ActionConfiguration:
-			protoRes = v2.NewConfigurationResult()
-		case msg.ActionActivation:
+		case msg.ActionConfiguration, msg.ActionActivation, msg.ActionPending:
 			protoRes = v2.NewConfigurationResult()
 		case msg.ActionRegistration:
 			protoRes = v2.NewRegistrationResult()
@@ -193,9 +191,7 @@ func (x *Rest) respondV2(w *http.ResponseWriter, r *msg.Result) {
 		*protoRes.Configurations = append(*protoRes.Configurations, r.Configuration...)
 	case msg.SectionLookup:
 		switch r.Action {
-		case msg.ActionConfiguration:
-			*protoRes.Configurations = append(*protoRes.Configurations, r.Configuration...)
-		case msg.ActionActivation:
+		case msg.ActionConfiguration, msg.ActionActivation, msg.ActionPending:
 			*protoRes.Configurations = append(*protoRes.Configurations, r.Configuration...)
 		case msg.ActionRegistration:
 			*protoRes.Registrations = append(*protoRes.Registrations, r.Registration...)

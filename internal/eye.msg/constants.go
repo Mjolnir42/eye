@@ -56,6 +56,7 @@ const (
 	ActionList          = `list`
 	ActionNop           = `nop`
 	ActionNotification  = `notification`
+	ActionPending       = `pending`
 	ActionProcess       = `process`
 	ActionRegistration  = `registration`
 	ActionRemove        = `remove`

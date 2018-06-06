@@ -33,7 +33,7 @@ LEFT JOIN eye.activations AS a
 WHERE     c.lookupID = $1::varchar
   AND     d.validity @> NOW()::timestamptz;`
 
-	LookupAdd = `
+	LookupAddID = `
 INSERT INTO eye.lookup (
             lookupID,
             hostID,
@@ -66,8 +66,8 @@ WHERE  d.validity @> NOW()::timestamptz
 
 func init() {
 	m[LookupActivation] = `LookupActivation`
+	m[LookupAddID] = `LookupAddID`
 	m[LookupConfiguration] = `LookupConfiguration`
-	m[LookupAdd] = `LookupAdd`
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

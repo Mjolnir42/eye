@@ -72,6 +72,10 @@ func NewLookup(conf *erebos.Config, appName string) *Lookup {
 		log:    nil,
 		name:   appName,
 	}
+	// use configured application name if it was set
+	if l.Config.Eyewall.ApplicationName != `` {
+		l.name = l.Config.Eyewall.ApplicationName
+	}
 	l.client = resty.New().
 		SetHeader(`Content-Type`, `application/json`).
 		SetContentLength(true).

@@ -111,6 +111,9 @@ func (l *Lookup) Start() error {
 	if _, err := l.redis.Ping().Result(); err != nil {
 		return err
 	}
+	if err := l.resetReceived(); err != nil {
+		return err
+	}
 	return l.Register()
 }
 

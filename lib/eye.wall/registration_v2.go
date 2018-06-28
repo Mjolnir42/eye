@@ -46,11 +46,11 @@ func (l *Lookup) v2Register() error {
 		Post(
 			l.eyeRegAddURL.String(),
 		); err != nil {
-		return fmt.Errorf("eyewall/register: %s", err.Error())
+		return fmt.Errorf("eyewall.v2Register: %s", err.Error())
 	}
 
 	if r, err = v2Result(resp.Body()); err != nil {
-		return fmt.Errorf("eyewall/register: %s", err.Error())
+		return fmt.Errorf("eyewall.v2Register: %s", err.Error())
 	}
 
 	// record our cache registrationID
@@ -75,11 +75,11 @@ func (l *Lookup) v2Unregister() error {
 		}).Delete(
 		l.eyeRegDelURL.String(),
 	); err != nil {
-		return fmt.Errorf("eyewall/register: %s", err.Error())
+		return fmt.Errorf("eyewall.v2Unregister: %s", err.Error())
 	}
 
 	if _, err = v2Result(resp.Body()); err != nil {
-		return fmt.Errorf("eyewall/register: %s", err.Error())
+		return fmt.Errorf("eyewall.v2Unregister: %s", err.Error())
 	}
 	l.registration = ``
 

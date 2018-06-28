@@ -24,7 +24,9 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/go-resty/resty"
 	"github.com/mjolnir42/erebos"
+	"github.com/mjolnir42/eye/internal/eye.msg"
 	proto "github.com/mjolnir42/eye/lib/eye.proto"
+	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 	"github.com/mjolnir42/limit"
 )
 
@@ -48,6 +50,11 @@ var (
 
 func init() {
 	beats.hb = make(map[int]time.Time)
+
+	// set timestamp formatting options
+	v2.TimeFormatString = proto.RFC3339Milli
+	v2.PosTimeInf = msg.PosTimeInf
+	v2.NegTimeInf = msg.NegTimeInf
 }
 
 // Lookup provides a query library to retrieve data from Eye

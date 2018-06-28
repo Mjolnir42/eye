@@ -525,4 +525,9 @@ func (l *Lookup) storeThreshold(lookID string, t *Threshold) {
 	}
 }
 
+// APIVersion returns the Eye API version discovered via taste testing
+func (l *Lookup) APIVersion() int {
+	return l.apiVersion
+}
+
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

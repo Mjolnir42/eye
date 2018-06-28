@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/go-resty/resty"
+	proto "github.com/mjolnir42/eye/lib/eye.proto"
 	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 )
 
@@ -84,6 +85,32 @@ func (l *Lookup) v2Unregister() error {
 	l.registration = ``
 
 	return nil
+}
+
+// v2LookupRegistrations returns the cache registrations of app via API
+// version 2
+func (l *Lookup) v2LookupRegistrations(app string) (*proto.Result, error) {
+	var err error
+	var resp *resty.Response
+	var r *v2.Result
+
+	if resp, err = l.client.R().
+		SetPathParams(map[string]string{
+			`app`: app,
+		}).Get(
+		l.eyeRegGetURL.String(),
+	); err != nil {
+		return nil, fmt.Errorf("eyewall.v2LookupRegistrations: %s", err.Error())
+	}
+
+	if r, err = v2Result(resp.Body()); err != nil {
+		return nil, fmt.Errorf("eyewall.v2LookupRegistrations: %s", err.Error())
+	}
+
+	return &proto.Result{
+		ApiVersion: proto.ProtocolTwo,
+		V2Result:   r,
+	}, nil
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

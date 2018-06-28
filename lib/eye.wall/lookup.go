@@ -42,6 +42,9 @@ var (
 	// ErrNoCache is returned if the application does not start the
 	// local cache, but a request against the local cache is issued
 	ErrNoCache = errors.New(`eyewall.Lookup: local cache not configured`)
+	// ErrProtocol is returned if the application attempted an action
+	// that is not supported by the used protocol version
+	ErrProtocol = errors.New(`eyewall.Lookup: request unsupported by protocol version`)
 	// beats is the map of heartbeats shared between all instances of
 	// Lookup. This way it can be ensured that all instances only move
 	// the timestamps forward in time.
@@ -69,6 +72,7 @@ type Lookup struct {
 	eyeActiveURL *url.URL
 	eyeRegAddURL *url.URL
 	eyeRegDelURL *url.URL
+	eyeRegGetURL *url.URL
 	client       *resty.Client
 	name         string
 	registration string
@@ -269,6 +273,12 @@ versionloop:
 			l.Config.Eyewall.Port,
 		))
 		foldSlashes(l.eyeRegDelURL)
+
+		l.eyeRegGetURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/lookup/registration/{app}",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+		))
+		foldSlashes(l.eyeRegGetURL)
 	}
 }
 

@@ -23,7 +23,7 @@ func (l *Lookup) Register() error {
 		return l.v2Register()
 	}
 
-	return nil
+	return ErrProtocol
 }
 
 // Unregister removes the cache invalidation registration from Eye
@@ -38,7 +38,17 @@ func (l *Lookup) Unregister() error {
 		return l.v2Unregister()
 	}
 
-	return nil
+	return ErrProtocol
+}
+
+// LookupRegistrations returns the registrations for app
+func (l *Lookup) LookupRegistrations(app string) (*proto.Result, error) {
+	switch l.apiVersion {
+	case proto.ProtocolTwo:
+		return l.v2LookupRegistrations(app)
+	}
+
+	return nil, ErrProtocol
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

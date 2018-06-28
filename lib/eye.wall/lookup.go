@@ -37,6 +37,9 @@ var (
 	// ErrUnavailable is returned when the cache does not contain the
 	// requested record and Eye can not be queried
 	ErrUnavailable = errors.New(`eyewall.Lookup: profile server unavailable`)
+	// ErrNoCache is returned if the application does not start the
+	// local cache, but a request against the local cache is issued
+	ErrNoCache = errors.New(`eyewall.Lookup: local cache not configured`)
 	// beats is the map of heartbeats shared between all instances of
 	// Lookup. This way it can be ensured that all instances only move
 	// the timestamps forward in time.
@@ -104,6 +107,11 @@ func NewLookup(conf *erebos.Config, appName string) *Lookup {
 // Start sets up Lookup and connects to Redis
 func (l *Lookup) Start() error {
 	l.Taste()
+
+	if l.Config.Eyewall.NoLocalRedis {
+		return nil
+	}
+
 	l.cacheTimeout = time.Duration(
 		l.Config.Redis.CacheTimeout,
 	) * time.Second
@@ -123,6 +131,10 @@ func (l *Lookup) Start() error {
 
 // Close shuts down the Redis connection
 func (l *Lookup) Close() {
+	if l.Config.Eyewall.NoLocalRedis {
+		return
+	}
+
 	l.redis.Close()
 	l.Unregister()
 }
@@ -398,6 +410,10 @@ func (l *Lookup) processRequest(lookID string) (map[string]Threshold, error) {
 
 // lookupRedis queries the Redis profile cache
 func (l *Lookup) lookupRedis(lookID string) (map[string]Threshold, error) {
+	if l.Config.Eyewall.NoLocalRedis {
+		return nil, ErrNoCache
+	}
+
 	res := make(map[string]Threshold)
 	data, err := l.redis.HGetAll(lookID).Result()
 	if err != nil {
@@ -431,6 +447,10 @@ dataloop:
 
 // setUnconfigured writes a negative cache entry into the local cache
 func (l *Lookup) setUnconfigured(lookID string) {
+	if l.Config.Eyewall.NoLocalRedis {
+		return
+	}
+
 	if _, err := l.redis.HSet(
 		lookID,
 		`unconfigured`,
@@ -454,6 +474,10 @@ func (l *Lookup) setUnconfigured(lookID string) {
 
 // storeThreshold writes t into the local cache
 func (l *Lookup) storeThreshold(lookID string, t *Threshold) {
+	if l.Config.Eyewall.NoLocalRedis {
+		return
+	}
+
 	buf, err := json.Marshal(t)
 	if err != nil {
 		if l.log != nil {

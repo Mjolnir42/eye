@@ -8,12 +8,16 @@
 
 package proto // import "github.com/mjolnir42/eye/lib/eye.proto"
 
-import "github.com/mjolnir42/eye/lib/eye.proto/v2"
+import (
+	"github.com/mjolnir42/eye/lib/eye.proto/v1"
+	"github.com/mjolnir42/eye/lib/eye.proto/v2"
+)
 
 // Result wraps Results for multiple versions
 type Result struct {
-	ApiVersion int        `json:"apiVersion"`
-	V2Result   *v2.Result `json:"v2Result,omitempty"`
+	ApiVersion int                   `json:"apiVersion"`
+	V1Data     *v1.ConfigurationData `json:"v1Data,omitempty"`
+	V2Result   *v2.Result            `json:"v2Result,omitempty"`
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

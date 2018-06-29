@@ -26,4 +26,19 @@ func (l *Lookup) Activate(profileID string) error {
 	return ErrProtocol
 }
 
+// PendingActivation returns the currently pending activations
+func (l *Lookup) PendingActivation() (*proto.Result, error) {
+	// apiVersion is not initialized, run a quick tasting
+	if l.apiVersion == proto.ProtocolInvalid {
+		l.taste(true)
+	}
+
+	switch l.apiVersion {
+	case proto.ProtocolTwo:
+		return l.v2PendingActivation()
+	}
+
+	return nil, ErrProtocol
+}
+
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

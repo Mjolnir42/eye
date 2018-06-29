@@ -74,6 +74,7 @@ type Lookup struct {
 	eyeRegDelURL *url.URL
 	eyeRegGetURL *url.URL
 	eyeCfgGetURL *url.URL
+	eyeActPndURL *url.URL
 	client       *resty.Client
 	name         string
 	registration string
@@ -292,6 +293,12 @@ versionloop:
 			l.Config.Eyewall.Port,
 		))
 		foldSlashes(l.eyeCfgGetURL)
+
+		l.eyeActPndURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/lookup/activation/",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+		))
+		foldSlashes(l.eyeActPndURL)
 	}
 }
 

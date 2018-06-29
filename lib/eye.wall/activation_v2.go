@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/go-resty/resty"
+	proto "github.com/mjolnir42/eye/lib/eye.proto"
+	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 )
 
 // v2ActivateProfile implements the activation of profileID for API
@@ -71,6 +73,30 @@ func (l *Lookup) v2UpdateCachedActivation(profileID, ts string) error {
 		return err
 	}
 	return nil
+}
+
+// v2PendingActivation ...
+func (l *Lookup) v2PendingActivation() (*proto.Result, error) {
+	var err error
+	var resp *resty.Response
+	var r *v2.Result
+
+	if resp, err = l.client.R().
+		SetQueryParam(`pending`, `true`).
+		Get(
+			l.eyeActPndURL.String(),
+		); err != nil {
+		return nil, fmt.Errorf("eyewall.v2PendingActivation: %s", err.Error())
+	}
+
+	if r, err = v2Result(resp.Body()); err != nil {
+		return nil, fmt.Errorf("eyewall.v2PendingActivation: %s", err.Error())
+	}
+
+	return &proto.Result{
+		ApiVersion: proto.ProtocolTwo,
+		V2Result:   r,
+	}, nil
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

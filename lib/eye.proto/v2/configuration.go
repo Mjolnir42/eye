@@ -132,6 +132,39 @@ dataloop:
 	return
 }
 
+// Latest returns a snapshot of c using the latest data
+func (c *Configuration) Latest() (s *Snapshot) {
+	s = &Snapshot{
+		CurrentTS: time.Now().UTC().Format(TimeFormatString),
+		HostID:    c.HostID,
+		ID:        c.ID,
+		LookupID:  c.LookupID,
+		Metric:    c.Metric,
+	}
+
+	latest := NegTimeInf
+
+dataloop:
+	for i := range c.Data {
+		validUntilTime := ParseValidity(c.Data[i].Info.ValidUntil)
+		if !validUntilTime.After(latest) {
+			continue dataloop
+		}
+		latest = validUntilTime
+		s.Valid = true
+		s.ValidAt = latest.UTC().Format(TimeFormatString)
+		s.Interval = c.Data[i].Interval
+		s.Monitoring = c.Data[i].Monitoring
+		s.Oncall = c.Data[i].Oncall
+		s.Source = c.Data[i].Source
+		s.Tags = c.Data[i].Tags
+		s.Targethost = c.Data[i].Targethost
+		s.Team = c.Data[i].Team
+		s.Thresholds = c.Data[i].Thresholds
+	}
+	return
+}
+
 // validate returns the evaluation result of the following condition:
 //	d.Info.ValidFrom <= at <= d.Info.ValidUntil
 func (d *Data) validate(at time.Time) bool {

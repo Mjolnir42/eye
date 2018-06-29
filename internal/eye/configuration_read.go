@@ -128,6 +128,10 @@ func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
 		&validFrom,
 	); err == sql.ErrNoRows {
 		mr.NotFound(err)
+		// record which configuration was not found
+		mr.Configuration = append(mr.Configuration, v2.Configuration{
+			ID: q.Configuration.ID,
+		})
 		goto rollback
 	} else if err != nil {
 		goto abort
@@ -144,6 +148,10 @@ func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
 		pq.Array(&tasks),
 	); err == sql.ErrNoRows {
 		mr.NotFound(err)
+		// record which configuration was not found
+		mr.Configuration = append(mr.Configuration, v2.Configuration{
+			ID: q.Configuration.ID,
+		})
 		goto rollback
 	} else if err != nil {
 		goto abort

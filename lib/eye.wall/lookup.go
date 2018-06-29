@@ -73,6 +73,7 @@ type Lookup struct {
 	eyeRegAddURL *url.URL
 	eyeRegDelURL *url.URL
 	eyeRegGetURL *url.URL
+	eyeCfgGetURL *url.URL
 	client       *resty.Client
 	name         string
 	registration string
@@ -249,6 +250,12 @@ versionloop:
 			l.Config.Eyewall.Port,
 		))
 		foldSlashes(l.eyeLookupURL)
+
+		l.eyeCfgGetURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v1/item/{profileID}",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+		))
+		foldSlashes(l.eyeCfgGetURL)
 	case proto.ProtocolTwo:
 		l.eyeLookupURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/lookup/configuration/{lookID}",
 			l.Config.Eyewall.Host,
@@ -279,6 +286,12 @@ versionloop:
 			l.Config.Eyewall.Port,
 		))
 		foldSlashes(l.eyeRegGetURL)
+
+		l.eyeCfgGetURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/configuration/{profileID}",
+			l.Config.Eyewall.Host,
+			l.Config.Eyewall.Port,
+		))
+		foldSlashes(l.eyeCfgGetURL)
 	}
 }
 

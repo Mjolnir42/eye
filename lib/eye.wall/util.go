@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/mjolnir42/eye/lib/eye.proto/v1"
 	"github.com/mjolnir42/eye/lib/eye.proto/v2"
 )
 
@@ -29,6 +30,15 @@ func foldSlashes(u *url.URL) {
 	) {
 		o = u.RequestURI()
 	}
+}
+
+// v1ConfigurationData returns a deserialized v1.ConfigurationData from
+// a response body
+func v1ConfigurationData(body []byte) (data *v1.ConfigurationData, err error) {
+	if err = json.Unmarshal(body, data); err != nil {
+		return
+	}
+	return
 }
 
 // v2Result returns a deserialized v2.Result from a response body

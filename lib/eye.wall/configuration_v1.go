@@ -36,7 +36,7 @@ func (l *Lookup) v1ConfigurationShow(profileID string) (*proto.Result, error) {
 	}
 
 	return &proto.Result{
-		ApiVersion: proto.ProtocolOne,
+		APIVersion: proto.ProtocolOne,
 		V1Data:     r,
 	}, nil
 }

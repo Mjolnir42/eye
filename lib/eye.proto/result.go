@@ -15,7 +15,7 @@ import (
 
 // Result wraps Results for multiple versions
 type Result struct {
-	ApiVersion int                   `json:"apiVersion"`
+	APIVersion int                   `json:"apiVersion"`
 	V1Data     *v1.ConfigurationData `json:"v1Data,omitempty"`
 	V2Result   *v2.Result            `json:"v2Result,omitempty"`
 }

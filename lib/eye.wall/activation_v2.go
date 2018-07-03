@@ -94,7 +94,7 @@ func (l *Lookup) v2PendingActivation() (*proto.Result, error) {
 	}
 
 	return &proto.Result{
-		ApiVersion: proto.ProtocolTwo,
+		APIVersion: proto.ProtocolTwo,
 		V2Result:   r,
 	}, nil
 }

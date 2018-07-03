@@ -108,7 +108,7 @@ func (l *Lookup) v2LookupRegistrations(app string) (*proto.Result, error) {
 	}
 
 	return &proto.Result{
-		ApiVersion: proto.ProtocolTwo,
+		APIVersion: proto.ProtocolTwo,
 		V2Result:   r,
 	}, nil
 }

@@ -75,7 +75,10 @@ func (l *Lookup) v2UpdateCachedActivation(profileID, ts string) error {
 	return nil
 }
 
-// v2PendingActivation ...
+// v2PendingActivation queries eye for monitoring profiles that have
+// been provisioned but not yet activated by a data receiving component.
+// In this state the server-side of the monitoring profile is ready, but
+// the client-side is still missing.
 func (l *Lookup) v2PendingActivation() (*proto.Result, error) {
 	var err error
 	var resp *resty.Response

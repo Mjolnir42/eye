@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package rest // import "github.com/mjolnir42/eye/internal/eye.rest"
+package rest // import "github.com/solnx/eye/internal/eye.rest"
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty"
-	msg "github.com/mjolnir42/eye/internal/eye.msg"
+	msg "github.com/solnx/eye/internal/eye.msg"
 )
 
 func (x *Rest) alarmSend(r *msg.Result) {

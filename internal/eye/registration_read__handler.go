@@ -6,14 +6,14 @@
  * that can be found in the LICENSE file.
  */
 
-package eye // import "github.com/mjolnir42/eye/internal/eye"
+package eye // import "github.com/solnx/eye/internal/eye"
 
 import (
 	"database/sql"
 
 	"github.com/Sirupsen/logrus"
-	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	stmt "github.com/mjolnir42/eye/internal/eye.stmt"
+	msg "github.com/solnx/eye/internal/eye.msg"
+	stmt "github.com/solnx/eye/internal/eye.stmt"
 )
 
 // Implementation of the Handler interface

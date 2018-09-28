@@ -7,16 +7,16 @@
  */
 
 // Package rest implements the REST routes to access EYE.
-package rest // import "github.com/mjolnir42/eye/internal/eye.rest"
+package rest // import "github.com/solnx/eye/internal/eye.rest"
 
 import (
 	"net/http"
 	"text/template"
 
 	"github.com/mjolnir42/erebos"
-	"github.com/mjolnir42/eye/internal/eye"
-	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	wall "github.com/mjolnir42/eye/lib/eye.wall"
+	"github.com/solnx/eye/internal/eye"
+	msg "github.com/solnx/eye/internal/eye.msg"
+	wall "github.com/solnx/eye/lib/eye.wall"
 	"github.com/mjolnir42/limit"
 	metrics "github.com/rcrowley/go-metrics"
 )

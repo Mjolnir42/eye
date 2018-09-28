@@ -7,7 +7,7 @@
  */
 
 // Package stmt provides SQL statement string constants for EYE
-package stmt // import "github.com/mjolnir42/eye/internal/eye.stmt"
+package stmt // import "github.com/solnx/eye/internal/eye.stmt"
 
 var m = make(map[string]string)
 

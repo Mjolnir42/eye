@@ -6,14 +6,14 @@
  * that can be found in the LICENSE file.
  */
 
-package mock // import "github.com/mjolnir42/eye/internal/eye.mock"
+package mock // import "github.com/solnx/eye/internal/eye.mock"
 
 import (
 	"database/sql"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/mjolnir42/erebos"
-	msg "github.com/mjolnir42/eye/internal/eye.msg"
+	msg "github.com/solnx/eye/internal/eye.msg"
 )
 
 // PermissiveSupervisor is a special supervisor that permits all

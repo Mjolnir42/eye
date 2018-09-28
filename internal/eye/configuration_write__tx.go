@@ -7,7 +7,7 @@
  * that can be found in the LICENSE file.
  */
 
-package eye // import "github.com/mjolnir42/eye/internal/eye"
+package eye // import "github.com/solnx/eye/internal/eye"
 
 import (
 	"database/sql"
@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/lib/pq"
-	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	"github.com/mjolnir42/eye/lib/eye.proto/v2"
+	msg "github.com/solnx/eye/internal/eye.msg"
+	"github.com/solnx/eye/lib/eye.proto/v2"
 )
 
 func init() {

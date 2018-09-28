@@ -8,7 +8,7 @@
  */
 
 // Package v1 implements the protocol datastructures for eye
-package v1 // import "github.com/mjolnir42/eye/lib/eye.proto/v1"
+package v1 // import "github.com/solnx/eye/lib/eye.proto/v1"
 
 // ConfigurationData contains a list of ConfigurationItems as returned
 // by the eye service

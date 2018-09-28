@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package wall // import "github.com/mjolnir42/eye/lib/eye.wall"
+package wall // import "github.com/solnx/eye/lib/eye.wall"
 
 import (
 	"encoding/json"
@@ -15,8 +15,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/mjolnir42/eye/lib/eye.proto/v1"
-	"github.com/mjolnir42/eye/lib/eye.proto/v2"
+	"github.com/solnx/eye/lib/eye.proto/v1"
+	"github.com/solnx/eye/lib/eye.proto/v2"
 )
 
 // foldSlashes folds consecutive slashes in u.RequestURI

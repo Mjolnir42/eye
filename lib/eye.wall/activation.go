@@ -6,9 +6,9 @@
  * that can be found in the LICENSE file.
  */
 
-package wall // import "github.com/mjolnir42/eye/lib/eye.wall"
+package wall // import "github.com/solnx/eye/lib/eye.wall"
 
-import proto "github.com/mjolnir42/eye/lib/eye.proto"
+import proto "github.com/solnx/eye/lib/eye.proto"
 
 // Activate marks a profile as active if l detected an API version that
 // supports profile Activation

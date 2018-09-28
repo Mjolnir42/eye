@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package v2 // import "github.com/mjolnir42/eye/lib/eye.proto/v2"
+package v2 // import "github.com/solnx/eye/lib/eye.proto/v2"
 
 // Request represents a v2 API request
 type Request struct {

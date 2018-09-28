@@ -6,12 +6,12 @@
  * that can be found in the LICENSE file.
  */
 
-package v2 // import "github.com/mjolnir42/eye/lib/eye.proto/v2"
+package v2 // import "github.com/solnx/eye/lib/eye.proto/v2"
 
 import (
 	"time"
 
-	"github.com/mjolnir42/eye/lib/eye.proto/v1"
+	"github.com/solnx/eye/lib/eye.proto/v1"
 )
 
 // Configuration holds the monitoring profile definition for a check

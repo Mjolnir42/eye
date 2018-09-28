@@ -6,12 +6,12 @@
  * that can be found in the LICENSE file.
  */
 
-package msg // import "github.com/mjolnir42/eye/internal/eye.msg"
+package msg // import "github.com/solnx/eye/internal/eye.msg"
 
 import (
 	"net/http"
 
-	"github.com/mjolnir42/eye/lib/eye.proto/v1"
+	"github.com/solnx/eye/lib/eye.proto/v1"
 )
 
 // ExportV1ConfigurationList generates a protocol version 1 list result

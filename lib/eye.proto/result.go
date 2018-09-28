@@ -6,11 +6,11 @@
  * that can be found in the LICENSE file.
  */
 
-package proto // import "github.com/mjolnir42/eye/lib/eye.proto"
+package proto // import "github.com/solnx/eye/lib/eye.proto"
 
 import (
-	"github.com/mjolnir42/eye/lib/eye.proto/v1"
-	"github.com/mjolnir42/eye/lib/eye.proto/v2"
+	"github.com/solnx/eye/lib/eye.proto/v1"
+	"github.com/solnx/eye/lib/eye.proto/v2"
 )
 
 // Result wraps Results for multiple versions

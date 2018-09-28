@@ -7,7 +7,7 @@
  * that can be found in the LICENSE file.
  */
 
-package main // import "github.com/mjolnir42/eye/cmd/eye"
+package main // import "github.com/solnx/eye/cmd/eye"
 
 import (
 	"os"
@@ -19,9 +19,9 @@ import (
 	"github.com/client9/reopen"
 	"github.com/droundy/goopt"
 	"github.com/mjolnir42/erebos"
-	"github.com/mjolnir42/eye/internal/eye"
-	"github.com/mjolnir42/eye/internal/eye.mock"
-	"github.com/mjolnir42/eye/internal/eye.rest"
+	"github.com/solnx/eye/internal/eye"
+	"github.com/solnx/eye/internal/eye.mock"
+	"github.com/solnx/eye/internal/eye.rest"
 )
 
 // eyeVersion is the version string set by make

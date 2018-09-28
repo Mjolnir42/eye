@@ -6,13 +6,13 @@
  * that can be found in the LICENSE file.
  */
 
-package eye // import "github.com/mjolnir42/eye/internal/eye"
+package eye // import "github.com/solnx/eye/internal/eye"
 
 import (
 	"database/sql"
 
 	"github.com/Sirupsen/logrus"
-	msg "github.com/mjolnir42/eye/internal/eye.msg"
+	msg "github.com/solnx/eye/internal/eye.msg"
 )
 
 // Handler process a specific request type

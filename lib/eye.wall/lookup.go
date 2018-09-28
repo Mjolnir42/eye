@@ -9,7 +9,7 @@
 
 // Package wall provides a lookup library for threshold
 // configurations managed by eye
-package wall // import "github.com/mjolnir42/eye/lib/eye.wall"
+package wall // import "github.com/solnx/eye/lib/eye.wall"
 
 import (
 	"encoding/json"
@@ -23,9 +23,9 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/go-resty/resty"
 	"github.com/mjolnir42/erebos"
-	"github.com/mjolnir42/eye/internal/eye.msg"
-	proto "github.com/mjolnir42/eye/lib/eye.proto"
-	"github.com/mjolnir42/eye/lib/eye.proto/v2"
+	"github.com/solnx/eye/internal/eye.msg"
+	proto "github.com/solnx/eye/lib/eye.proto"
+	"github.com/solnx/eye/lib/eye.proto/v2"
 	"github.com/mjolnir42/limit"
 )
 

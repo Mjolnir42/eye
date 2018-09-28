@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package wall // import "github.com/mjolnir42/eye/lib/eye.wall"
+package wall // import "github.com/solnx/eye/lib/eye.wall"
 
 import (
 	"fmt"
@@ -14,8 +14,8 @@ import (
 	"strings"
 
 	"github.com/go-resty/resty"
-	proto "github.com/mjolnir42/eye/lib/eye.proto"
-	"github.com/mjolnir42/eye/lib/eye.proto/v2"
+	proto "github.com/solnx/eye/lib/eye.proto"
+	"github.com/solnx/eye/lib/eye.proto/v2"
 )
 
 // v2Register implements the cache registration for API version 2

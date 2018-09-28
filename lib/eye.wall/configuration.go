@@ -6,9 +6,9 @@
  * that can be found in the LICENSE file.
  */
 
-package wall // import "github.com/mjolnir42/eye/lib/eye.wall"
+package wall // import "github.com/solnx/eye/lib/eye.wall"
 
-import proto "github.com/mjolnir42/eye/lib/eye.proto"
+import proto "github.com/solnx/eye/lib/eye.proto"
 
 // ConfigurationShow ...
 func (l *Lookup) ConfigurationShow(profileID string) (*proto.Result, error) {

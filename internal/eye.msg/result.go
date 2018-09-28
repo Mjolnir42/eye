@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package msg // import "github.com/mjolnir42/eye/internal/eye.msg"
+package msg // import "github.com/solnx/eye/internal/eye.msg"
 
 import (
 	"database/sql"
@@ -14,7 +14,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mjolnir42/eye/lib/eye.proto/v2"
+	"github.com/solnx/eye/lib/eye.proto/v2"
 	uuid "github.com/satori/go.uuid"
 )
 

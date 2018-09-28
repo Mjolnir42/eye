@@ -6,14 +6,14 @@
  * that can be found in the LICENSE file.
  */
 
-package rest // import "github.com/mjolnir42/eye/internal/eye.rest"
+package rest // import "github.com/solnx/eye/internal/eye.rest"
 
 import (
 	"encoding/json"
 	"net/http"
 
-	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	"github.com/mjolnir42/eye/lib/eye.proto/v2"
+	msg "github.com/solnx/eye/internal/eye.msg"
+	"github.com/solnx/eye/lib/eye.proto/v2"
 )
 
 // respond is the output function for all requests

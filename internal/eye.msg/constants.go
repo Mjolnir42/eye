@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package msg // import "github.com/mjolnir42/eye/internal/eye.msg"
+package msg // import "github.com/solnx/eye/internal/eye.msg"
 
 // API protocol versions
 const (

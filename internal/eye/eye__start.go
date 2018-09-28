@@ -6,10 +6,10 @@
  * that can be found in the LICENSE file.
  */
 
-package eye // import "github.com/mjolnir42/eye/internal/eye"
+package eye // import "github.com/solnx/eye/internal/eye"
 
 import (
-	mock "github.com/mjolnir42/eye/internal/eye.mock"
+	mock "github.com/solnx/eye/internal/eye.mock"
 )
 
 // Start launches all application handlers

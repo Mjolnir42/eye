@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package rest // import "github.com/mjolnir42/eye/internal/eye.rest"
+package rest // import "github.com/solnx/eye/internal/eye.rest"
 
 import "github.com/julienschmidt/httprouter"
 

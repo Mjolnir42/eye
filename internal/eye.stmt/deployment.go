@@ -7,6 +7,6 @@
  * that can be found in the LICENSE file.
  */
 
-package stmt // import "github.com/mjolnir42/eye/internal/eye.stmt"
+package stmt // import "github.com/solnx/eye/internal/eye.stmt"
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

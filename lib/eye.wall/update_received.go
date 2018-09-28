@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package wall // import "github.com/mjolnir42/eye/lib/eye.wall"
+package wall // import "github.com/solnx/eye/lib/eye.wall"
 
 // UpdateReceived increments the counter of received metrics
 func (l *Lookup) UpdateReceived() {

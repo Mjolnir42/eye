@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package main // import "github.com/mjolnir42/eye/cmd/eye"
+package main // import "github.com/solnx/eye/cmd/eye"
 
 import (
 	"database/sql"
@@ -14,7 +14,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/mjolnir42/erebos"
-	"github.com/mjolnir42/eye/internal/eye"
+	"github.com/solnx/eye/internal/eye"
 )
 
 type runtime struct {

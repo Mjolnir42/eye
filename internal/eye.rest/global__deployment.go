@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package rest // import "github.com/mjolnir42/eye/internal/eye.rest"
+package rest // import "github.com/solnx/eye/internal/eye.rest"
 
 import (
 	"encoding/json"
@@ -19,7 +19,7 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/go-resty/resty"
 	"github.com/julienschmidt/httprouter"
-	msg "github.com/mjolnir42/eye/internal/eye.msg"
+	msg "github.com/solnx/eye/internal/eye.msg"
 	"github.com/mjolnir42/soma/lib/proto"
 	uuid "github.com/satori/go.uuid"
 )

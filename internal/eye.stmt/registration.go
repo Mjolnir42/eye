@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package stmt // import "github.com/mjolnir42/eye/internal/eye.stmt"
+package stmt // import "github.com/solnx/eye/internal/eye.stmt"
 
 // RegistryStatements contains the SQL statements related to the
 // registration of applications with Eye

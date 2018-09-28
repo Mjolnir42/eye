@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package proto // import "github.com/mjolnir42/eye/lib/eye.proto"
+package proto // import "github.com/solnx/eye/lib/eye.proto"
 
 import "time"
 

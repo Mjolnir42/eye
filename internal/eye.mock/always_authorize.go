@@ -7,10 +7,10 @@
  */
 
 // Package mock implements various placeholders
-package mock // import "github.com/mjolnir42/eye/internal/eye.mock"
+package mock // import "github.com/solnx/eye/internal/eye.mock"
 
 import (
-	msg "github.com/mjolnir42/eye/internal/eye.msg"
+	msg "github.com/solnx/eye/internal/eye.msg"
 )
 
 // AlwaysAuthorize authorizes every request

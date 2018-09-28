@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package main // import "github.com/mjolnir42/eye/cmd/eye"
+package main // import "github.com/solnx/eye/cmd/eye"
 
 import (
 	"database/sql"
@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/lib/pq"
-	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	stmt "github.com/mjolnir42/eye/internal/eye.stmt"
+	msg "github.com/solnx/eye/internal/eye.msg"
+	stmt "github.com/solnx/eye/internal/eye.stmt"
 )
 
 // connectDatabase opens the connection to the database and configures

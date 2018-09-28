@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package rest // import "github.com/mjolnir42/eye/internal/eye.rest"
+package rest // import "github.com/solnx/eye/internal/eye.rest"
 
 import (
 	"crypto/sha256"
@@ -23,9 +23,9 @@ import (
 	"time"
 
 	"github.com/asaskevich/govalidator"
-	msg "github.com/mjolnir42/eye/internal/eye.msg"
-	eyeproto "github.com/mjolnir42/eye/lib/eye.proto"
-	"github.com/mjolnir42/eye/lib/eye.proto/v2"
+	msg "github.com/solnx/eye/internal/eye.msg"
+	eyeproto "github.com/solnx/eye/lib/eye.proto"
+	"github.com/solnx/eye/lib/eye.proto/v2"
 	"github.com/mjolnir42/soma/lib/proto"
 )
 

@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package eye // import "github.com/mjolnir42/eye/internal/eye"
+package eye // import "github.com/solnx/eye/internal/eye"
 
 import (
 	"database/sql"

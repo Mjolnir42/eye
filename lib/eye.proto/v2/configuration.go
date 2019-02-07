@@ -20,6 +20,7 @@ type Configuration struct {
 	ActivatedAt string `json:"activatedAt"`
 	Data        []Data `json:"data"`
 	HostID      uint64 `json:"hostID,string"`
+	Hostname    string `json:"hostname"`
 	ID          string `json:"configurationID" valid:"uuidv4"`
 	LookupID    string `json:"lookupID"`
 	Metric      string `json:"metric"`
@@ -62,6 +63,7 @@ type Snapshot struct {
 	ValidAt    string
 	CurrentTS  string
 	HostID     uint64
+	Hostname   string
 	ID         string
 	LookupID   string
 	Metric     string
@@ -117,6 +119,7 @@ dataloop:
 		s.ValidAt = ts.UTC().Format(TimeFormatString)
 		s.CurrentTS = time.Now().UTC().Format(TimeFormatString)
 		s.HostID = c.HostID
+		s.Hostname = c.Hostname
 		s.ID = c.ID
 		s.LookupID = c.LookupID
 		s.Metric = c.Metric
@@ -137,6 +140,7 @@ func (c *Configuration) Latest() (s *Snapshot) {
 	s = &Snapshot{
 		CurrentTS: time.Now().UTC().Format(TimeFormatString),
 		HostID:    c.HostID,
+		Hostname:  c.Hostname,
 		ID:        c.ID,
 		LookupID:  c.LookupID,
 		Metric:    c.Metric,
@@ -181,9 +185,10 @@ func (d *Data) validate(at time.Time) bool {
 // versions v1 and v2
 func ConfigurationFromV1(item *v1.ConfigurationItem) Configuration {
 	cfg := Configuration{
-		HostID: item.HostID,
-		ID:     item.ConfigurationItemID,
-		Metric: item.Metric,
+		HostID:   item.HostID,
+		Hostname: item.Metadata.Targethost,
+		ID:       item.ConfigurationItemID,
+		Metric:   item.Metric,
 	}
 	data := Data{
 		Interval:   item.Interval,

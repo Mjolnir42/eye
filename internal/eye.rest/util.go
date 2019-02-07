@@ -23,10 +23,10 @@ import (
 	"time"
 
 	"github.com/asaskevich/govalidator"
+	"github.com/mjolnir42/soma/lib/proto"
 	msg "github.com/solnx/eye/internal/eye.msg"
 	eyeproto "github.com/solnx/eye/lib/eye.proto"
 	"github.com/solnx/eye/lib/eye.proto/v2"
-	"github.com/mjolnir42/soma/lib/proto"
 )
 
 func panicCatcher(w http.ResponseWriter) {
@@ -54,12 +54,13 @@ func decodeJSONBody(r *http.Request, s interface{}) (err error) {
 // processDeploymentDetails creates an eye protocol configuration from
 // SOMA deployment details
 func processDeploymentDetails(details *proto.Deployment) (string, v2.Configuration, error) {
-	lookupID := calculateLookupID(details.Node.AssetID, details.Metric.Path)
+	lookupID := calculateLookupID(details.Node.Name, details.Metric.Path)
 
 	config := v2.Configuration{
-		HostID: details.Node.AssetID,
-		ID:     details.CheckInstance.InstanceID,
-		Metric: details.Metric.Path,
+		Hostname: details.Node.Name,
+		HostID:   details.Node.AssetID,
+		ID:       details.CheckInstance.InstanceID,
+		Metric:   details.Metric.Path,
 	}
 	data := v2.Data{
 		Interval:   details.CheckConfig.Interval,
@@ -82,7 +83,7 @@ func processDeploymentDetails(details *proto.Deployment) (string, v2.Configurati
 
 		// update metric path and recalculate updated lookupID
 		config.Metric = fmt.Sprintf("%s:%s", config.Metric, mountpoint)
-		lookupID = calculateLookupID(details.Node.AssetID, details.Metric.Path)
+		lookupID = calculateLookupID(details.Node.Name, details.Metric.Path)
 	}
 	config.LookupID = lookupID
 
@@ -120,10 +121,9 @@ func processDeploymentDetails(details *proto.Deployment) (string, v2.Configurati
 
 // calculateLookupID returns the lookupID hash for a given (id,metric)
 // tuple
-func calculateLookupID(id uint64, metric string) string {
-	asset := strconv.FormatUint(id, 10)
+func calculateLookupID(host, metric string) string {
 	hash := sha256.New()
-	hash.Write([]byte(asset))
+	hash.Write([]byte(host))
 	hash.Write([]byte(metric))
 
 	return hex.EncodeToString(hash.Sum(nil))

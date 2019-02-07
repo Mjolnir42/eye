@@ -16,10 +16,10 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
+	uuid "github.com/satori/go.uuid"
 	msg "github.com/solnx/eye/internal/eye.msg"
 	"github.com/solnx/eye/lib/eye.proto/v1"
 	"github.com/solnx/eye/lib/eye.proto/v2"
-	uuid "github.com/satori/go.uuid"
 )
 
 // ConfigurationShow accepts requests to retrieve a specific
@@ -108,7 +108,7 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 
 	request.Configuration.InputSanatize()
 	request.LookupHash = calculateLookupID(
-		request.Configuration.HostID,
+		request.Configuration.Hostname,
 		request.Configuration.Metric,
 	)
 	request.Configuration.LookupID = request.LookupHash
@@ -165,7 +165,7 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 
 	request.Configuration.InputSanatize()
 	request.LookupHash = calculateLookupID(
-		request.Configuration.HostID,
+		request.Configuration.Hostname,
 		request.Configuration.Metric,
 	)
 	request.Configuration.LookupID = request.LookupHash

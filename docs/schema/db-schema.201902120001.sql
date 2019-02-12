@@ -1,4 +1,4 @@
--- SCHEMA VERSION: 201805070001
+-- SCHEMA VERSION: 201902120001
 --
 -- connect as RDBMS superuser
 --

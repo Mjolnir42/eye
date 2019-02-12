@@ -25,6 +25,7 @@ type Invalidation struct {
 
 // NewInvalidation returns a new Invalidation
 func NewInvalidation(conf *erebos.Config) (iv *Invalidation) {
+	iv = &Invalidation{}
 	iv.Config = conf
 	iv.Registry = make(map[string]*redis.Client)
 	return

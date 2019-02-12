@@ -57,6 +57,7 @@ func daemon() int {
 	run := runtime{}
 	run.logFileMap = &eye.LogHandleMap{}
 	run.logFileMap.Init()
+
 	run.conf = &erebos.Config{}
 
 	// read configuration file
@@ -137,7 +138,7 @@ func daemon() int {
 
 	// handler map shared between eye.Eye and rest.Rest
 	hm := eye.HandlerMap{}
-
+	hm.Init()
 	// start application
 	app := eye.New(&hm, run.conn, run.conf, run.appLog, run.reqLog, run.errLog, run.auditLog)
 	app.Start()

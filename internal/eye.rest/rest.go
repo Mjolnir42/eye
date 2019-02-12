@@ -11,14 +11,15 @@ package rest // import "github.com/solnx/eye/internal/eye.rest"
 
 import (
 	"net/http"
+	"net/url"
 	"text/template"
 
 	"github.com/mjolnir42/erebos"
+	"github.com/mjolnir42/limit"
+	metrics "github.com/rcrowley/go-metrics"
 	"github.com/solnx/eye/internal/eye"
 	msg "github.com/solnx/eye/internal/eye.msg"
 	wall "github.com/solnx/eye/lib/eye.wall"
-	"github.com/mjolnir42/limit"
-	metrics "github.com/rcrowley/go-metrics"
 )
 
 // ShutdownInProgress indicates a pending service shutdown
@@ -61,7 +62,8 @@ func New(
 // Run is the event server for Rest
 func (x *Rest) Run() {
 	router := x.setupRouter()
-
+	x.conf.Eye.Daemon.URL = &url.URL{}
+	x.conf.Eye.Daemon.URL.Host = x.conf.Eye.Daemon.Listen + ":" + x.conf.Eye.Daemon.Port
 	// TODO switch to new abortable interface
 	if x.conf.Eye.Daemon.TLS {
 		// XXX log.Fatal

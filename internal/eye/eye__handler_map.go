@@ -22,6 +22,11 @@ type HandlerMap struct {
 	sync.RWMutex
 }
 
+// Initialize HandlerMap
+func (h *HandlerMap) Init() {
+	h.hmap = make(map[string]Handler)
+}
+
 // Add registers a new handler
 func (h *HandlerMap) Add(key string, value Handler) {
 	h.Lock()

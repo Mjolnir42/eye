@@ -53,7 +53,7 @@ WHERE  configurationID = $1::uuid
 	CfgDataUpdateValidity = `
 UPDATE eye.configurations_data
 SET    validity = tstzrange($1::timestamptz, $2::timestamptz, '[)')
-WHERE  dataID = $3::uid;`
+WHERE  dataID = $3::uuid;`
 
 	CfgAddData = `
 INSERT INTO eye.configurations_data (

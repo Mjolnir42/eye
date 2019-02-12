@@ -10,7 +10,6 @@
 package main // import "github.com/solnx/eye/cmd/eye"
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"

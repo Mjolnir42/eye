@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	uuid "github.com/satori/go.uuid"
 	msg "github.com/solnx/eye/internal/eye.msg"
 	"github.com/solnx/eye/lib/eye.proto/v2"
-	uuid "github.com/satori/go.uuid"
 )
 
 // ConfigurationWrite handles write requests for configurations
@@ -109,6 +109,7 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 	if res, err = tx.Stmt(w.stmtLookupAddID).Exec(
 		q.LookupHash,
 		int(q.Configuration.HostID),
+		q.Configuration.Hostname,
 		q.Configuration.Metric,
 	); err != nil {
 		goto abort

@@ -37,15 +37,17 @@ WHERE     c.lookupID = $1::varchar
 INSERT INTO eye.lookup (
             lookupID,
             hostID,
+		    hostname,
             metric)
 SELECT $1::varchar,
        $2::numeric,
-       $3::text
+       $3::text,
+	   $4::text
 WHERE  NOT EXISTS (
        SELECT lookupID
        FROM   eye.lookup
        WHERE  lookupID = $1::varchar
-          OR  ( hostID = $2::numeric AND metric = $3::text));`
+          OR  ( hostID = $2::numeric AND hostname = $3::text AND metric = $4::text));`
 
 	LookupActivation = `
 SELECT a.configurationID,

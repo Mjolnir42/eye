@@ -10,6 +10,7 @@
 package main // import "github.com/solnx/eye/cmd/eye"
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -56,6 +57,8 @@ func daemon() int {
 
 	run := runtime{}
 	run.logFileMap = &eye.LogHandleMap{}
+	run.logFileMap.Init()
+	run.conf = &erebos.Config{}
 
 	// read configuration file
 	if configurationFile, err = filepath.Abs(*cliConfPath); err != nil {
@@ -67,7 +70,6 @@ func daemon() int {
 	if err = run.conf.FromFile(configurationFile); err != nil {
 		logrus.Fatal(err)
 	}
-
 	// open global default logger logfile
 	if lfhGlobal, err = reopen.NewFileWriter(
 		filepath.Join(run.conf.Log.Path, `global.log`),

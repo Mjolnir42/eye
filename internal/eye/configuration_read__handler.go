@@ -44,6 +44,22 @@ func (r *ConfigurationRead) Run() {
 			r.errLog.Fatal(`configuration_r`, err, stmt.Name(statement))
 		}
 		defer prepStmt.Close()
+		switch statement {
+		case stmt.CfgSelectValid:
+			r.stmtCfgSelectValid = prepStmt
+		case stmt.CfgShow:
+			r.stmtCfgShow = prepStmt
+		case stmt.ActivationGet:
+			r.stmtActivationGet = prepStmt
+		case stmt.CfgList:
+			r.stmtCfgList = prepStmt
+		case stmt.CfgDataHistory:
+			r.stmtCfgHistory = prepStmt
+		case stmt.ProvForDataID:
+			r.stmtProvInfo = prepStmt
+		case stmt.CfgVersion:
+			r.stmtCfgVersion = prepStmt
+		}
 	}
 
 runloop:

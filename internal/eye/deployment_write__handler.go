@@ -38,6 +38,7 @@ func (w *DeploymentWrite) Run() {
 			w.errLog.Fatal(`deployment`, err, stmt.Name(statement))
 		}
 		defer prepStmt.Close()
+		w.stmtExists = prepStmt
 	}
 
 runloop:

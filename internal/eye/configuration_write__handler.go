@@ -48,6 +48,26 @@ func (w *ConfigurationWrite) Run() {
 			w.errLog.Fatal(`lookup`, err, stmt.Name(statement))
 		}
 		defer prepStmt.Close()
+		switch statement {
+		case stmt.LookupAddID:
+			w.stmtLookupAddID = prepStmt
+		case stmt.CfgAddID:
+			w.stmtCfgAddID = prepStmt
+		case stmt.CfgSelectValidForUpdate:
+			w.stmtCfgSelectValidForUpdate = prepStmt
+		case stmt.CfgDataUpdateValidity:
+			w.stmtCfgDataUpdateValidity = prepStmt
+		case stmt.CfgAddData:
+			w.stmtCfgAddData = prepStmt
+		case stmt.ProvAdd:
+			w.stmtProvAdd = prepStmt
+		case stmt.ActivationGet:
+			w.stmtActivationGet = prepStmt
+		case stmt.CfgShow:
+			w.stmtCfgShow = prepStmt
+		case stmt.ActivationSet:
+			w.stmtActivationSet = prepStmt
+		}
 	}
 
 runloop:

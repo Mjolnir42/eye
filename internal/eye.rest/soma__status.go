@@ -16,9 +16,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/go-resty/resty"
-	msg "github.com/solnx/eye/internal/eye.msg"
 	uuid "github.com/satori/go.uuid"
+	msg "github.com/solnx/eye/internal/eye.msg"
 )
 
 // somaStatusUpdate encapsulates the handling of deployment feedback
@@ -38,9 +39,9 @@ func (x *Rest) somaStatusUpdate(r *msg.Result) {
 	default:
 		feedback = `success`
 	}
-
-	url := strings.Replace(r.FeedbackURL, `{STATUS}`, feedback, -1)
-
+	fmt.Println(r.FeedbackURL)
+	url := strings.Replace(r.FeedbackURL, `%7BSTATUS%7D`, feedback, -1)
+	fmt.Println(url)
 	client := resty.New().
 		// set generic client options
 		SetDisableWarn(true).
@@ -76,14 +77,23 @@ func (x *Rest) somaStatusUpdate(r *msg.Result) {
 
 	res, err := client.R().Patch(url)
 	if err != nil {
-		log.Println(`RequestID`, r.ID.String(), `DeploymentID`, r.Configuration[0].ID, `Error`, err.Error())
+		if len(r.Configuration) >= 1 {
+			log.Println(`RequestID`, r.ID.String(), `DeploymentID`, r.Configuration[0].ID, `Error`, err.Error())
+		} else {
+			log.Println(`RequestID`, r.ID.String(), `Error`, err.Error())
+		}
 		return
 	}
-
+	fmt.Println("Successfully sent patch request to soma")
+	spew.Dump(r)
 	switch res.StatusCode() {
 	case http.StatusOK:
 	default:
-		log.Println(`RequestID`, r.ID.String(), `DeploymentID`, r.Configuration[0].ID, res.StatusCode(), res.Status())
+		if len(r.Configuration) >= 1 {
+			log.Println(`RequestID`, r.ID.String(), `DeploymentID`, r.Configuration[0].ID, res.StatusCode(), res.Status())
+		} else {
+			log.Println(`RequestID`, r.ID.String(), res.StatusCode(), res.Status())
+		}
 	}
 }
 
@@ -91,28 +101,33 @@ func (x *Rest) somaStatusUpdate(r *msg.Result) {
 // on r and updates r.FeedbackURL if it is.
 func (x *Rest) somaSetFeedbackURL(r *msg.Request) {
 	if !r.Flags.SendDeploymentFeedback {
+		x.appLog.Infoln("We will not send deployment feedback")
 		r.FeedbackURL = ``
 		return
 	}
 
 	path := x.conf.Eye.SomaPrefix
 	feedbackID := r.Configuration.ID
-
+	x.appLog.Infof("Initially set Path: %s, ID: %s", path, feedbackID)
 	// potentially better data is available from a SOMA deployment
 	// notification
 	if !uuid.Equal(uuid.Nil, r.Notification.ID) {
+		x.appLog.Infoln("Lets use the infos of the deplyment details")
 		path = r.Notification.PathPrefix
 		feedbackID = r.Notification.ID.String()
 	}
-
+	x.appLog.Infof("Path: %s, ID: %s", path, feedbackID)
 	soma, _ := url.Parse(x.conf.Eye.SomaURL)
+
 	soma.Path = fmt.Sprintf("/%s/%s/{STATUS}",
 		path,
 		feedbackID,
 	)
+	x.appLog.Infoln("foldSlashes")
 	foldSlashes(soma)
+	x.appLog.Infoln("Set FeedbackURL to ", soma.String())
 	r.FeedbackURL = soma.String()
-
+	return
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

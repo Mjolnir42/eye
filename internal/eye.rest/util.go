@@ -112,7 +112,7 @@ func processDeploymentDetails(details *proto.Deployment) (string, v2.Configurati
 	}
 	config.Data = []v2.Data{data}
 
-	govalidator.SetFieldsRequiredByDefault(true)
+	govalidator.SetFieldsRequiredByDefault(false)
 	if ok, err := govalidator.ValidateStruct(config); !ok {
 		return ``, v2.Configuration{}, err
 	}
@@ -264,15 +264,10 @@ func resolveFlags(rqProtocol *v2.Request, rqInternal *msg.Request) error {
 
 // foldSlashes collapses sequences of multiple consecutive / characters
 func foldSlashes(u *url.URL) {
-	o := u.RequestURI()
-
-	for u.Path = strings.Replace(
-		u.RequestURI(), `//`, `/`, -1,
-	); o != u.RequestURI(); u.Path = strings.Replace(
-		u.RequestURI(), `//`, `/`, -1,
-	) {
-		o = u.RequestURI()
-	}
+	fmt.Println(u.RequestURI())
+	u.RawPath = strings.Replace(u.RawPath, "//", "/", -1)
+	fmt.Println(u.RequestURI())
+	return
 }
 
 // stringToTime attempts to parse timestring s into t

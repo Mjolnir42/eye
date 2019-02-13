@@ -19,9 +19,9 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/go-resty/resty"
 	"github.com/julienschmidt/httprouter"
-	msg "github.com/solnx/eye/internal/eye.msg"
 	"github.com/mjolnir42/soma/lib/proto"
 	uuid "github.com/satori/go.uuid"
+	msg "github.com/solnx/eye/internal/eye.msg"
 )
 
 // DeploymentNotification implements the API call that receives
@@ -29,25 +29,26 @@ import (
 func (x *Rest) DeploymentNotification(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
-
+	x.appLog.Println("DeploymentNotification: ", r.RequestURI)
 	// craft internal request message
 	request := msg.New(r, params)
 	request.Section = msg.SectionDeployment
 	request.Action = msg.ActionNotification
-
 	// decode client payload
 	clientReq := proto.NewPushNotification()
 	if err := decodeJSONBody(r, &clientReq); err != nil {
+		x.appLog.Errorln("decode error: ", err.Error())
 		x.replyUnprocessableEntity(&w, &request, err)
 		return
 	}
 
 	// validate client payload
-	govalidator.SetFieldsRequiredByDefault(true)
+	govalidator.SetFieldsRequiredByDefault(false)
 	govalidator.TagMap[`abspath`] = govalidator.Validator(func(str string) bool {
 		return filepath.IsAbs(str)
 	})
 	if ok, err := govalidator.ValidateStruct(clientReq); !ok {
+		x.appLog.Errorln("validation error: ", err.Error())
 		x.replyUnprocessableEntity(&w, &request, err)
 		return
 	}
@@ -67,6 +68,7 @@ func (x *Rest) DeploymentNotification(w http.ResponseWriter, r *http.Request,
 
 	// request authorization for request
 	if !x.isAuthorized(&request) {
+		x.appLog.Infoln("Not authorized, forbidden: ", request.ID.String())
 		x.replyForbidden(&w, &request, nil)
 		return
 	}
@@ -79,7 +81,7 @@ func (x *Rest) DeploymentNotification(w http.ResponseWriter, r *http.Request,
 func (x *Rest) DeploymentProcess(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
-
+	x.appLog.Println("DeploymentProcess: ", r.RequestURI)
 	request := msg.New(r, params)
 	request.Section = msg.SectionDeployment
 	request.Action = msg.ActionProcess
@@ -166,16 +168,16 @@ func (x *Rest) fetchPushDeployment(w *http.ResponseWriter, q *msg.Request) {
 		res  proto.Result
 		err  error
 	)
-
 	// build URL to download deploymentDetails
 	soma, _ := url.Parse(x.conf.Eye.SomaURL)
 	soma.Path = fmt.Sprintf("%s/%s",
 		q.Notification.PathPrefix,
 		q.Notification.ID.String(),
 	)
+
 	foldSlashes(soma)
 	detailsDownload := soma.String()
-
+	x.appLog.Infoln("Download details from: ", detailsDownload)
 	// fetch DeploymentDetails inside concurrency limited go routine
 	// without blocking the full handler within the limiter
 	done := make(chan struct{})
@@ -216,57 +218,69 @@ func (x *Rest) fetchPushDeployment(w *http.ResponseWriter, q *msg.Request) {
 
 		close(sig)
 	}(done, resp, detailsDownload, err)
-
+	x.appLog.Infoln("Download started")
 	// block on running go routine
 	<-done
+	x.appLog.Infoln("Download completed")
 	if err != nil {
+		x.appLog.Errorln("Error on fetch: ", err.Error())
 		x.replyGatewayTimeout(w, q, err)
 		return
 	}
 
 	// HTTP protocol statuscode > 299
 	if resp.StatusCode() > 299 {
+		x.appLog.Errorf("Received: %d/%s", resp.StatusCode(), resp.Status())
 		x.replyBadGateway(w, q, fmt.Errorf("Received: %d/%s", resp.StatusCode(), resp.Status()))
 		return
 	}
 	if err = json.Unmarshal(resp.Body(), &res); err != nil {
+		x.appLog.Errorln("Could not unmarshal the details: ", err.Error())
 		x.replyUnprocessableEntity(w, q, err)
 		return
 	}
 
 	// SOMA application statuscode != 200
 	if res.StatusCode != 200 {
+		x.appLog.Errorf("SOMA: %d/%s", res.StatusCode, res.StatusText)
 		x.replyGone(w, q, fmt.Errorf("SOMA: %d/%s", res.StatusCode, res.StatusText))
 		return
 	}
 
 	if len(*res.Deployments) != 1 {
+		x.appLog.Errorf("Deployment count %d != 1", len(*res.Deployments))
 		x.replyUnprocessableEntity(w, q, fmt.Errorf("Deployment count %d != 1", len(*res.Deployments)))
 		return
 	}
 
 	q.ConfigurationTask = (*res.Deployments)[0].Task
+	x.appLog.Infoln("Process deployment details...")
 	if q.LookupHash, q.Configuration, err = processDeploymentDetails(&(*res.Deployments)[0]); err != nil {
+		x.appLog.Errorln("Error: ", err.Error())
 		x.replyInternalError(w, q, err)
 		return
 	}
-
+	x.appLog.Infoln("Deployment processed, lookup hash: ", q.LookupHash)
 	if err := resolveFlags(nil, q); err != nil {
+		x.appLog.Errorln("Error: ", err.Error())
 		x.replyBadRequest(w, q, err)
 		return
 	}
-
+	x.appLog.Infoln("Dummy1")
 	// build URL to send deployment feedback
 	x.somaSetFeedbackURL(q)
-
+	x.appLog.Infoln("Dummy2")
 	if !x.isAuthorized(q) {
+		x.appLog.Infoln("Dummy3")
 		x.replyForbidden(w, q, nil)
 		return
 	}
-
+	x.appLog.Infoln("Dummy4")
 	handler := x.handlerMap.Get(`deployment_w`)
+	x.appLog.Infoln("Queued in deployment_w")
 	handler.Intake() <- *q
 	result := <-q.Reply
+	x.appLog.Infoln("Send result %d to %s ", result.Code, q.FeedbackURL)
 	x.respond(w, &result)
 }
 

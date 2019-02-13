@@ -22,8 +22,8 @@ func (e *Eye) Start() {
 
 	// start regular handlers
 	e.handlerMap.Add(`configuration_r`, newConfigurationRead(e.conf.Eye.QueueLen))
-	e.handlerMap.Add(`configuration_w`, newConfigurationWrite(e.conf.Eye.QueueLen))
-	e.handlerMap.Add(`deployment_w`, newDeploymentWrite(e.conf.Eye.QueueLen))
+	e.handlerMap.Add(`configuration_w`, newConfigurationWrite(e.conf.Eye.QueueLen, e.appLog, e.reqLog, e.errLog))
+	e.handlerMap.Add(`deployment_w`, newDeploymentWrite(e.conf.Eye.QueueLen, e.appLog, e.reqLog, e.errLog))
 	e.handlerMap.Add(`lookup_r`, newLookupRead(e.conf.Eye.QueueLen))
 	e.handlerMap.Add(`registration_r`, newRegistrationRead(e.conf.Eye.QueueLen))
 	e.handlerMap.Add(`registration_w`, newRegistrationWrite(e.conf.Eye.QueueLen))

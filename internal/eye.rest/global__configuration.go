@@ -53,7 +53,7 @@ func (x *Rest) ConfigurationShow(w http.ResponseWriter, r *http.Request,
 func (x *Rest) ConfigurationList(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
-
+	x.appLog.Println("ConfigurationList: ", r.RequestURI)
 	request := msg.New(r, params)
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionList
@@ -73,7 +73,7 @@ func (x *Rest) ConfigurationList(w http.ResponseWriter, r *http.Request,
 func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
-
+	x.appLog.Println("ConfigurationAdd: ", r.RequestURI)
 	request := msg.New(r, params)
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionAdd
@@ -130,7 +130,7 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
-
+	x.appLog.Println("ConfigurationUpdate: ", r.RequestURI)
 	request := msg.New(r, params)
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionUpdate
@@ -200,6 +200,7 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 func (x *Rest) ConfigurationRemove(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
+	x.appLog.Println("ConfigurationRemove: ", r.RequestURI)
 
 	request := msg.New(r, params)
 	request.Section = msg.SectionConfiguration
@@ -244,6 +245,7 @@ func (x *Rest) ConfigurationActivate(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
 
+	x.appLog.Println("ConfigurationActivate: ", r.RequestURI)
 	request := msg.New(r, params)
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionActivate
@@ -271,6 +273,7 @@ func (x *Rest) ConfigurationHistory(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
 
+	x.appLog.Println("ConfigurationHistory: ", r.RequestURI)
 	request := msg.New(r, params)
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionHistory
@@ -299,6 +302,7 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 	defer panicCatcher(w)
 	var err error
 
+	x.appLog.Println("ConfigurationVersion: ", r.RequestURI)
 	request := msg.New(r, params)
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionVersion

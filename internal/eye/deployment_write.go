@@ -29,10 +29,13 @@ type DeploymentWrite struct {
 }
 
 // newDeploymentWrite return a new DeploymentWrite handler with input buffer of length
-func newDeploymentWrite(length int) (r *DeploymentWrite) {
+func newDeploymentWrite(length int, appLog, reqLog, errLog *logrus.Logger) (r *DeploymentWrite) {
 	r = &DeploymentWrite{}
 	r.Input = make(chan msg.Request, length)
 	r.Shutdown = make(chan struct{})
+	r.appLog = appLog
+	r.reqLog = reqLog
+	r.errLog = errLog
 	return
 }
 
@@ -63,7 +66,8 @@ func (w *DeploymentWrite) notification(q *msg.Request, mr *msg.Result) {
 		q.Configuration.ID,
 	).Scan(
 		&configurationID,
-	); err != nil {
+	); err != nil && err != sql.ErrNoRows {
+		w.appLog.Errorln(err)
 		mr.ServerError(err)
 		q.Reply <- *mr
 		return

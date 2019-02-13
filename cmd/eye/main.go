@@ -144,7 +144,7 @@ func daemon() int {
 	app.Start()
 
 	// start REST API
-	rst := rest.New(mock.AlwaysAuthorize, &hm, run.conf)
+	rst := rest.New(mock.AlwaysAuthorize, &hm, run.conf, run.appLog, run.reqLog, run.errLog, run.auditLog)
 	go rst.Run()
 
 	sigChanKill := make(chan os.Signal, 1)

@@ -42,10 +42,13 @@ type ConfigurationWrite struct {
 }
 
 // newConfigurationWrite return a new ConfigurationWrite handler with input buffer of length
-func newConfigurationWrite(length int) (w *ConfigurationWrite) {
+func newConfigurationWrite(length int, appLog, reqLog, errLog *logrus.Logger) (w *ConfigurationWrite) {
 	w = &ConfigurationWrite{}
 	w.Input = make(chan msg.Request, length)
 	w.Shutdown = make(chan struct{})
+	w.appLog = appLog
+	w.reqLog = reqLog
+	w.errLog = errLog
 	return
 }
 

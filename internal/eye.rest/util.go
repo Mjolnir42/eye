@@ -264,10 +264,15 @@ func resolveFlags(rqProtocol *v2.Request, rqInternal *msg.Request) error {
 
 // foldSlashes collapses sequences of multiple consecutive / characters
 func foldSlashes(u *url.URL) {
-	fmt.Println(u.RequestURI())
-	u.RawPath = strings.Replace(u.RawPath, "//", "/", -1)
-	fmt.Println(u.RequestURI())
-	return
+	o := u.RequestURI()
+
+	for u.Path = strings.Replace(
+		u.RequestURI(), `//`, `/`, -1,
+	); o != u.RequestURI(); u.Path = strings.Replace(
+		u.RequestURI(), `//`, `/`, -1,
+	) {
+		o = u.RequestURI()
+	}
 }
 
 // stringToTime attempts to parse timestring s into t

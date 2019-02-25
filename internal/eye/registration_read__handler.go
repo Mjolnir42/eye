@@ -30,15 +30,15 @@ func (r *RegistrationRead) Register(c *sql.DB, l ...*logrus.Logger) {
 func (r *RegistrationRead) Run() {
 	var err error
 
-	for statement, prepStmt := range map[string]*sql.Stmt{
-		stmt.RegistryList:   r.stmtList,
-		stmt.RegistrySearch: r.stmtSearch,
-		stmt.RegistryShow:   r.stmtShow,
+	for statement, prepStmt := range map[string]**sql.Stmt{
+		stmt.RegistryList:   &r.stmtList,
+		stmt.RegistrySearch: &r.stmtSearch,
+		stmt.RegistryShow:   &r.stmtShow,
 	} {
-		if prepStmt, err = r.conn.Prepare(statement); err != nil {
+		if *prepStmt, err = r.conn.Prepare(statement); err != nil {
 			r.errLog.Fatal(`lookup`, err, stmt.Name(statement))
 		}
-		defer prepStmt.Close()
+		defer (*prepStmt).Close()
 	}
 
 runloop:

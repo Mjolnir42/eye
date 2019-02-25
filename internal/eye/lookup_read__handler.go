@@ -31,15 +31,15 @@ func (r *LookupRead) Register(c *sql.DB, l ...*logrus.Logger) {
 func (r *LookupRead) Run() {
 	var err error
 
-	for statement, prepStmt := range map[string]*sql.Stmt{
-		stmt.LookupActivation:    r.stmtActivation,
-		stmt.LookupConfiguration: r.stmtCfgLookup,
-		stmt.LookupPending:       r.stmtPending,
+	for statement, prepStmt := range map[string]**sql.Stmt{
+		stmt.LookupActivation:    &r.stmtActivation,
+		stmt.LookupConfiguration: &r.stmtCfgLookup,
+		stmt.LookupPending:       &r.stmtPending,
 	} {
-		if prepStmt, err = r.conn.Prepare(statement); err != nil {
+		if *prepStmt, err = r.conn.Prepare(statement); err != nil {
 			r.errLog.Fatal(`lookup`, err, stmt.Name(statement))
 		}
-		defer prepStmt.Close()
+		defer (*prepStmt).Close()
 	}
 
 runloop:

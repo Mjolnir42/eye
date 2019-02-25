@@ -31,35 +31,19 @@ func (r *ConfigurationRead) Register(c *sql.DB, l ...*logrus.Logger) {
 func (r *ConfigurationRead) Run() {
 	var err error
 
-	for statement, prepStmt := range map[string]*sql.Stmt{
-		stmt.CfgSelectValid: r.stmtCfgSelectValid,
-		stmt.CfgShow:        r.stmtCfgShow,
-		stmt.ActivationGet:  r.stmtActivationGet,
-		stmt.CfgList:        r.stmtCfgList,
-		stmt.CfgDataHistory: r.stmtCfgHistory,
-		stmt.ProvForDataID:  r.stmtProvInfo,
-		stmt.CfgVersion:     r.stmtCfgVersion,
+	for statement, prepStmt := range map[string]**sql.Stmt{
+		stmt.CfgSelectValid: &r.stmtCfgSelectValid,
+		stmt.CfgShow:        &r.stmtCfgShow,
+		stmt.ActivationGet:  &r.stmtActivationGet,
+		stmt.CfgList:        &r.stmtCfgList,
+		stmt.CfgDataHistory: &r.stmtCfgHistory,
+		stmt.ProvForDataID:  &r.stmtProvInfo,
+		stmt.CfgVersion:     &r.stmtCfgVersion,
 	} {
-		if prepStmt, err = r.conn.Prepare(statement); err != nil {
+		if *prepStmt, err = r.conn.Prepare(statement); err != nil {
 			r.errLog.Fatal(`configuration_r`, err, stmt.Name(statement))
 		}
-		defer prepStmt.Close()
-		switch statement {
-		case stmt.CfgSelectValid:
-			r.stmtCfgSelectValid = prepStmt
-		case stmt.CfgShow:
-			r.stmtCfgShow = prepStmt
-		case stmt.ActivationGet:
-			r.stmtActivationGet = prepStmt
-		case stmt.CfgList:
-			r.stmtCfgList = prepStmt
-		case stmt.CfgDataHistory:
-			r.stmtCfgHistory = prepStmt
-		case stmt.ProvForDataID:
-			r.stmtProvInfo = prepStmt
-		case stmt.CfgVersion:
-			r.stmtCfgVersion = prepStmt
-		}
+		defer (*prepStmt).Close()
 	}
 
 runloop:

@@ -31,43 +31,23 @@ func (w *ConfigurationWrite) Register(c *sql.DB, l ...*logrus.Logger) {
 func (w *ConfigurationWrite) Run() {
 	var err error
 
-	for statement, prepStmt := range map[string]*sql.Stmt{
-		stmt.LookupAddID:             w.stmtLookupAddID,
-		stmt.CfgAddID:                w.stmtCfgAddID,
-		stmt.CfgSelectValidForUpdate: w.stmtCfgSelectValidForUpdate,
-		stmt.CfgDataUpdateValidity:   w.stmtCfgDataUpdateValidity,
-		stmt.CfgAddData:              w.stmtCfgAddData,
-		stmt.ProvAdd:                 w.stmtProvAdd,
-		stmt.ActivationGet:           w.stmtActivationGet,
-		stmt.ProvFinalize:            w.stmtProvFinalize,
-		stmt.ActivationDel:           w.stmtActivationDel,
-		stmt.CfgShow:                 w.stmtCfgShow,
-		stmt.ActivationSet:           w.stmtActivationSet,
+	for statement, prepStmt := range map[string]**sql.Stmt{
+		stmt.LookupAddID:             &w.stmtLookupAddID,
+		stmt.CfgAddID:                &w.stmtCfgAddID,
+		stmt.CfgSelectValidForUpdate: &w.stmtCfgSelectValidForUpdate,
+		stmt.CfgDataUpdateValidity:   &w.stmtCfgDataUpdateValidity,
+		stmt.CfgAddData:              &w.stmtCfgAddData,
+		stmt.ProvAdd:                 &w.stmtProvAdd,
+		stmt.ActivationGet:           &w.stmtActivationGet,
+		stmt.ProvFinalize:            &w.stmtProvFinalize,
+		stmt.ActivationDel:           &w.stmtActivationDel,
+		stmt.CfgShow:                 &w.stmtCfgShow,
+		stmt.ActivationSet:           &w.stmtActivationSet,
 	} {
-		if prepStmt, err = w.conn.Prepare(statement); err != nil {
+		if *prepStmt, err = w.conn.Prepare(statement); err != nil {
 			w.errLog.Fatal(`lookup`, err, stmt.Name(statement))
 		}
-		defer prepStmt.Close()
-		switch statement {
-		case stmt.LookupAddID:
-			w.stmtLookupAddID = prepStmt
-		case stmt.CfgAddID:
-			w.stmtCfgAddID = prepStmt
-		case stmt.CfgSelectValidForUpdate:
-			w.stmtCfgSelectValidForUpdate = prepStmt
-		case stmt.CfgDataUpdateValidity:
-			w.stmtCfgDataUpdateValidity = prepStmt
-		case stmt.CfgAddData:
-			w.stmtCfgAddData = prepStmt
-		case stmt.ProvAdd:
-			w.stmtProvAdd = prepStmt
-		case stmt.ActivationGet:
-			w.stmtActivationGet = prepStmt
-		case stmt.CfgShow:
-			w.stmtCfgShow = prepStmt
-		case stmt.ActivationSet:
-			w.stmtActivationSet = prepStmt
-		}
+		defer (*prepStmt).Close()
 	}
 
 runloop:

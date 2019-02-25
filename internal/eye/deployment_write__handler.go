@@ -31,14 +31,13 @@ func (w *DeploymentWrite) Register(c *sql.DB, l ...*logrus.Logger) {
 func (w *DeploymentWrite) Run() {
 	var err error
 
-	for statement, prepStmt := range map[string]*sql.Stmt{
-		stmt.CfgExists: w.stmtExists,
+	for statement, prepStmt := range map[string]**sql.Stmt{
+		stmt.CfgExists: &w.stmtExists,
 	} {
-		if prepStmt, err = w.conn.Prepare(statement); err != nil {
+		if *prepStmt, err = w.conn.Prepare(statement); err != nil {
 			w.errLog.Fatal(`deployment`, err, stmt.Name(statement))
 		}
-		defer prepStmt.Close()
-		w.stmtExists = prepStmt
+		defer (*prepStmt).Close()
 	}
 
 runloop:

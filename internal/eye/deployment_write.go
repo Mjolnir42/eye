@@ -93,6 +93,7 @@ func (w *DeploymentWrite) notification(q *msg.Request, mr *msg.Result) {
 	case msg.TaskDelete, msg.TaskDeprovision:
 		// deprovision|delete + configuration does not exist -> no-op
 		if err == sql.ErrNoRows {
+			w.appLog.Infoln("Deprovision of task, this is a noop because we did not find any records in the database for id: ", q.Configuration.ID)
 			q.Section = msg.SectionConfiguration
 			q.Action = msg.ActionNop
 			handler.Intake() <- *q
@@ -117,6 +118,7 @@ func (w *DeploymentWrite) notification(q *msg.Request, mr *msg.Result) {
 	case msg.TaskRollout:
 		q.Action = msg.ActionUpdate
 	case msg.TaskDelete, msg.TaskDeprovision:
+		w.appLog.Infoln("Deprovision of check with id: ", q.Configuration.ID)
 		q.Action = msg.ActionRemove
 	}
 	handler.Intake() <- *q

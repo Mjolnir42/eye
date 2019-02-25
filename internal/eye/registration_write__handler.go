@@ -31,16 +31,16 @@ func (w *RegistrationWrite) Register(c *sql.DB, l ...*logrus.Logger) {
 func (w *RegistrationWrite) Run() {
 	var err error
 
-	for statement, prepStmt := range map[string]*sql.Stmt{
-		stmt.RegistryAdd:    w.stmtAdd,
-		stmt.RegistryDel:    w.stmtRemove,
-		stmt.RegistryShow:   w.stmtShow,
-		stmt.RegistryUpdate: w.stmtUpdate,
+	for statement, prepStmt := range map[string]**sql.Stmt{
+		stmt.RegistryAdd:    &w.stmtAdd,
+		stmt.RegistryDel:    &w.stmtRemove,
+		stmt.RegistryShow:   &w.stmtShow,
+		stmt.RegistryUpdate: &w.stmtUpdate,
 	} {
-		if prepStmt, err = w.conn.Prepare(statement); err != nil {
+		if *prepStmt, err = w.conn.Prepare(statement); err != nil {
 			w.errLog.Fatal(`RegistrationWrite`, err, stmt.Name(statement))
 		}
-		defer prepStmt.Close()
+		defer (*prepStmt).Close()
 	}
 
 runloop:

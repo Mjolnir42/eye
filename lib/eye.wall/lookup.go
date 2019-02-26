@@ -20,13 +20,14 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/go-redis/redis"
 	"github.com/go-resty/resty"
 	"github.com/mjolnir42/erebos"
+	"github.com/mjolnir42/limit"
 	"github.com/solnx/eye/internal/eye.msg"
 	proto "github.com/solnx/eye/lib/eye.proto"
 	"github.com/solnx/eye/lib/eye.proto/v2"
-	"github.com/mjolnir42/limit"
 )
 
 var (
@@ -53,13 +54,13 @@ type Lookup struct {
 	redis        *redis.Client
 	cacheTimeout time.Duration
 	apiVersion   int
-	eyeLookupURL *url.URL
-	eyeActiveURL *url.URL
-	eyeRegAddURL *url.URL
-	eyeRegDelURL *url.URL
-	eyeRegGetURL *url.URL
-	eyeCfgGetURL *url.URL
-	eyeActPndURL *url.URL
+	eyeLookupURL string
+	eyeActiveURL string
+	eyeRegAddURL string
+	eyeRegDelURL string
+	eyeRegGetURL string
+	eyeCfgGetURL string
+	eyeActPndURL string
 	client       *resty.Client
 	name         string
 	registration string
@@ -104,8 +105,9 @@ func NewLookup(conf *erebos.Config, appName string) *Lookup {
 
 // Start sets up Lookup and connects to Redis
 func (l *Lookup) Start() error {
+	fmt.Println("pre taste")
 	l.Taste()
-
+	fmt.Println("post taste")
 	if l.Config.Eyewall.NoLocalRedis {
 		return nil
 	}
@@ -124,6 +126,7 @@ func (l *Lookup) Start() error {
 	if err := l.resetReceived(); err != nil {
 		return err
 	}
+	fmt.Println("pre register")
 	return l.Register()
 }
 
@@ -155,7 +158,7 @@ func (l *Lookup) taste(quick bool) {
 		retryCount = 2
 		timeoutMS = 250
 	}
-
+	fmt.Println("Enter versionloop")
 versionloop:
 	// protocol version array is preference sorted, first hit wins
 	for _, apiVersion := range []int{proto.ProtocolTwo, proto.ProtocolOne} {
@@ -167,9 +170,9 @@ versionloop:
 		if err != nil {
 			l.log.Fatalf("eyewall/cache: malformed eye URL: %s", err.Error())
 		}
-
+		fmt.Println("Pre foldSlashes")
 		foldSlashes(eyeURL)
-
+		fmt.Println(eyeURL.String())
 		resp, err := resty.New().
 			// set generic client options
 			SetHeader(`Content-Type`, `application/json`).
@@ -231,59 +234,50 @@ versionloop:
 	}
 	switch l.apiVersion {
 	case proto.ProtocolOne:
-		l.eyeLookupURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v1/configuration/{lookID}",
+		l.eyeLookupURL = fmt.Sprintf("http://%s:%s/api/v1/configuration/{lookID}",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeLookupURL)
+		)
 
-		l.eyeCfgGetURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v1/item/{profileID}",
+		l.eyeCfgGetURL = fmt.Sprintf("http://%s:%s/api/v1/item/{profileID}",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeCfgGetURL)
+		)
 	case proto.ProtocolTwo:
-		l.eyeLookupURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/lookup/configuration/{lookID}",
+		l.eyeLookupURL = fmt.Sprintf("http://%s:%s/api/v2/lookup/configuration/{lookID}",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeLookupURL)
+		)
 
-		l.eyeActiveURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/configuration/{profileID}/active",
+		l.eyeActiveURL = fmt.Sprintf("http://%s:%s/api/v2/configuration/{profileID}/active",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeActiveURL)
+		)
 
-		l.eyeRegAddURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/registration/",
+		l.eyeRegAddURL = fmt.Sprintf("http://%s:%s/api/v2/registration/",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeRegAddURL)
+		)
 
-		l.eyeRegDelURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/registration/{registrationID}",
+		l.eyeRegDelURL = fmt.Sprintf("http://%s:%s/api/v2/registration/{registrationID}",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeRegDelURL)
+		)
 
-		l.eyeRegGetURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/lookup/registration/{app}",
+		l.eyeRegGetURL = fmt.Sprintf("http://%s:%s/api/v2/lookup/registration/{app}",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeRegGetURL)
+		)
 
-		l.eyeCfgGetURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/configuration/{profileID}",
+		l.eyeCfgGetURL = fmt.Sprintf("http://%s:%s/api/v2/configuration/{profileID}",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeCfgGetURL)
+		)
 
-		l.eyeActPndURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/lookup/activation/",
+		l.eyeActPndURL = fmt.Sprintf("http://%s:%s/api/v2/lookup/activation/",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeActPndURL)
+		)
 	}
 }
 
@@ -416,6 +410,7 @@ func (l *Lookup) processRequest(lookID string) (map[string]Threshold, error) {
 		}
 
 		// process result from eye and store in redis
+		spew.Dump(res)
 		thr, err = l.v2Process(lookID, res)
 		if err == ErrUnconfigured {
 			return nil, ErrUnconfigured

@@ -14,8 +14,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/solnx/eye/lib/eye.proto/v2"
 	uuid "github.com/satori/go.uuid"
+	"github.com/solnx/eye/lib/eye.proto/v2"
 )
 
 // Result ...
@@ -181,7 +181,6 @@ func (r *Result) shrinkwrap(code uint16, err error) {
 		err = fmt.Errorf(http.StatusText(int(code)))
 	}
 	r.setError(err)
-	r.clear()
 	r.fixated = true
 }
 
@@ -189,6 +188,7 @@ func (r *Result) shrinkwrap(code uint16, err error) {
 // is preserved as is
 func (r *Result) setError(err error) {
 	if err != nil {
+		r.clear()
 		r.Error = err
 	}
 }

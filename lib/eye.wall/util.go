@@ -21,14 +21,13 @@ import (
 
 // foldSlashes folds consecutive slashes in u.RequestURI
 func foldSlashes(u *url.URL) {
-	o := u.RequestURI()
-
-	for u.Path = strings.Replace(
-		u.RequestURI(), `//`, `/`, -1,
-	); o != u.RequestURI(); u.Path = strings.Replace(
-		u.RequestURI(), `//`, `/`, -1,
+	o := u.RawPath
+	for u.RawPath = strings.Replace(
+		u.RawPath, `//`, `/`, -1,
+	); o != u.RawPath; u.RawPath = strings.Replace(
+		u.RawPath, `//`, `/`, -1,
 	) {
-		o = u.RequestURI()
+		o = u.RawPath
 	}
 }
 
@@ -43,6 +42,7 @@ func v1ConfigurationData(body []byte) (data *v1.ConfigurationData, err error) {
 
 // v2Result returns a deserialized v2.Result from a response body
 func v2Result(body []byte) (result *v2.Result, err error) {
+	result = &v2.Result{}
 	if err = json.Unmarshal(body, result); err != nil {
 		return
 	}
@@ -51,13 +51,13 @@ func v2Result(body []byte) (result *v2.Result, err error) {
 	// be routed to the application
 	switch result.StatusCode {
 	case http.StatusOK:
+
 		// success
 	case http.StatusNotFound:
 		result = nil
 		err = ErrUnconfigured
 	default:
 		// there was some error
-		result = nil
 		err = fmt.Errorf("eye(%s|%s) %d/%s: %v",
 			result.Section,
 			result.Action,
@@ -65,6 +65,7 @@ func v2Result(body []byte) (result *v2.Result, err error) {
 			result.StatusText,
 			result.Errors,
 		)
+		result = nil
 	}
 	return
 }

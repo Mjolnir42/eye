@@ -9,6 +9,7 @@
 package wall // import "github.com/solnx/eye/lib/eye.wall"
 
 import proto "github.com/solnx/eye/lib/eye.proto"
+import "fmt"
 
 // Register adds this eyewall cache to the list of active caches that
 // must be invalidated by Eye
@@ -20,9 +21,10 @@ func (l *Lookup) Register() error {
 
 	switch l.apiVersion {
 	case proto.ProtocolTwo:
+		fmt.Println("v2Register")
 		return l.v2Register()
 	}
-
+	fmt.Println("ErrProtocol")
 	return ErrProtocol
 }
 

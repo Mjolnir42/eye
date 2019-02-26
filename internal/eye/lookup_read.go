@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+
 	"github.com/lib/pq"
 	msg "github.com/solnx/eye/internal/eye.msg"
 	"github.com/solnx/eye/lib/eye.proto/v2"
@@ -61,6 +62,7 @@ func (r *LookupRead) process(q *msg.Request) {
 
 // configuration returns all configurations matching a specific LookupHash
 func (r *LookupRead) configuration(q *msg.Request, mr *msg.Result) {
+
 	var (
 		configurationID, dataID, configuration string
 		validFrom, validUntil                  time.Time
@@ -77,7 +79,6 @@ func (r *LookupRead) configuration(q *msg.Request, mr *msg.Result) {
 		mr.ServerError(err)
 		return
 	}
-
 	for rows.Next() {
 		if err = rows.Scan(
 			&configurationID,
@@ -97,6 +98,7 @@ func (r *LookupRead) configuration(q *msg.Request, mr *msg.Result) {
 
 		c := v2.Configuration{}
 		if err = json.Unmarshal([]byte(configuration), &c); err != nil {
+			fmt.Println(err.Error())
 			mr.ServerError(err)
 			rows.Close()
 			return
@@ -108,7 +110,6 @@ func (r *LookupRead) configuration(q *msg.Request, mr *msg.Result) {
 			c.ActivatedAt = `never`
 		}
 		c.LookupID = q.LookupHash
-
 		d := c.Data[0]
 		d.ID = dataID
 		d.Info = v2.MetaInformation{

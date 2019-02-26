@@ -42,7 +42,7 @@ func (l *Lookup) v2ActivateProfile(profileID string) error {
 		SetPathParams(map[string]string{
 			`profileID`: profileID,
 		}).Patch(
-		l.eyeActiveURL.String(),
+		l.eyeActiveURL,
 	); err != nil {
 		return fmt.Errorf("eyewall/cache: %s", err.Error())
 	}
@@ -87,7 +87,7 @@ func (l *Lookup) v2PendingActivation() (*proto.Result, error) {
 	if resp, err = l.client.R().
 		SetQueryParam(`pending`, `true`).
 		Get(
-			l.eyeActPndURL.String(),
+			l.eyeActPndURL,
 		); err != nil {
 		return nil, fmt.Errorf("eyewall.v2PendingActivation: %s", err.Error())
 	}

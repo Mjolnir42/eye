@@ -45,12 +45,14 @@ func (l *Lookup) v2Register() error {
 	if resp, err = l.client.R().
 		SetBody(rq).
 		Post(
-			l.eyeRegAddURL.String(),
+			l.eyeRegAddURL,
 		); err != nil {
+		fmt.Println("Error from eye:", err.Error())
 		return fmt.Errorf("eyewall.v2Register: %s", err.Error())
 	}
 
 	if r, err = v2Result(resp.Body()); err != nil {
+		fmt.Println("Error from v2Result:", err.Error())
 		return fmt.Errorf("eyewall.v2Register: %s", err.Error())
 	}
 
@@ -74,7 +76,7 @@ func (l *Lookup) v2Unregister() error {
 		SetPathParams(map[string]string{
 			`registrationID`: l.registration,
 		}).Delete(
-		l.eyeRegDelURL.String(),
+		l.eyeRegDelURL,
 	); err != nil {
 		return fmt.Errorf("eyewall.v2Unregister: %s", err.Error())
 	}
@@ -98,7 +100,7 @@ func (l *Lookup) v2LookupRegistrations(app string) (*proto.Result, error) {
 		SetPathParams(map[string]string{
 			`app`: app,
 		}).Get(
-		l.eyeRegGetURL.String(),
+		l.eyeRegGetURL,
 	); err != nil {
 		return nil, fmt.Errorf("eyewall.v2LookupRegistrations: %s", err.Error())
 	}

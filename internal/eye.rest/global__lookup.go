@@ -27,7 +27,6 @@ func (x *Rest) LookupConfiguration(w http.ResponseWriter, r *http.Request,
 	request.Section = msg.SectionLookup
 	request.Action = msg.ActionConfiguration
 	request.LookupHash = strings.ToLower(params.ByName(`hash`))
-
 	if !x.isAuthorized(&request) {
 		x.replyForbidden(&w, &request, nil)
 		return
@@ -35,6 +34,7 @@ func (x *Rest) LookupConfiguration(w http.ResponseWriter, r *http.Request,
 
 	// lookup is to be performed via SHA2/256 hash
 	if len(request.LookupHash) != 64 {
+
 		x.replyBadRequest(&w, &request, fmt.Errorf(
 			`Invalid SHA2-256 lookup hash format`,
 		))

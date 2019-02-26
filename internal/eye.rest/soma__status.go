@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/go-resty/resty"
 	uuid "github.com/satori/go.uuid"
 	msg "github.com/solnx/eye/internal/eye.msg"
@@ -85,7 +84,7 @@ func (x *Rest) somaStatusUpdate(r *msg.Result) {
 		return
 	}
 	fmt.Println("Successfully sent patch request to soma")
-	spew.Dump(r)
+
 	switch res.StatusCode() {
 	case http.StatusOK:
 	default:
@@ -97,7 +96,7 @@ func (x *Rest) somaStatusUpdate(r *msg.Result) {
 	}
 }
 
-// somaSetFeedbackURL checks if the SendDeploymentFeedback flag is set
+// somaURL checks if the SendDeploymentFeedback flag is set
 // on r and updates r.FeedbackURL if it is.
 func (x *Rest) somaSetFeedbackURL(r *msg.Request) {
 	if !r.Flags.SendDeploymentFeedback {

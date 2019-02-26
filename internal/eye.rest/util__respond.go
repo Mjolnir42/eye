@@ -216,8 +216,8 @@ func (x *Rest) respondV2(w *http.ResponseWriter, r *msg.Result) {
 	// no cache invalidation for failed requests
 	// no alarm clearing for failed requests
 	case r.Code >= 400:
-		*protoRes.Configurations = nil
-		*protoRes.Registrations = nil
+		protoRes.Configurations = nil
+		protoRes.Registrations = nil
 		r.Flags.CacheInvalidation = false
 		r.Flags.AlarmClearing = false
 	}

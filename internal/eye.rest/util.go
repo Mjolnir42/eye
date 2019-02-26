@@ -45,6 +45,9 @@ func decodeJSONBody(r *http.Request, s interface{}) (err error) {
 	case *proto.PushNotification:
 		c := s.(*proto.PushNotification)
 		err = decoder.Decode(c)
+	case *v2.Request:
+		c := s.(*v2.Request)
+		err = decoder.Decode(c)
 	default:
 		err = fmt.Errorf("decodeJSONBody: unhandled request type: %s", reflect.TypeOf(s))
 	}
@@ -264,14 +267,13 @@ func resolveFlags(rqProtocol *v2.Request, rqInternal *msg.Request) error {
 
 // foldSlashes collapses sequences of multiple consecutive / characters
 func foldSlashes(u *url.URL) {
-	o := u.RequestURI()
-
-	for u.Path = strings.Replace(
-		u.RequestURI(), `//`, `/`, -1,
-	); o != u.RequestURI(); u.Path = strings.Replace(
-		u.RequestURI(), `//`, `/`, -1,
+	o := u.RawPath
+	for u.RawPath = strings.Replace(
+		u.RawPath, `//`, `/`, -1,
+	); o != u.RawPath; u.RawPath = strings.Replace(
+		u.RawPath, `//`, `/`, -1,
 	) {
-		o = u.RequestURI()
+		o = u.RawPath
 	}
 }
 

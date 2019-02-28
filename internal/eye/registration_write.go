@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	msg "github.com/solnx/eye/internal/eye.msg"
 	uuid "github.com/satori/go.uuid"
+	msg "github.com/solnx/eye/internal/eye.msg"
 )
 
 // RegistrationWrite handles read requests for hash lookups
@@ -28,15 +28,14 @@ type RegistrationWrite struct {
 	stmtShow   *sql.Stmt
 	stmtUpdate *sql.Stmt
 	appLog     *logrus.Logger
-	reqLog     *logrus.Logger
-	errLog     *logrus.Logger
 }
 
 // newRegistrationWrite return a new RegistrationWrite handler with input buffer of length
-func newRegistrationWrite(length int) (w *RegistrationWrite) {
+func newRegistrationWrite(length int, appLog *logrus.Logger) (w *RegistrationWrite) {
 	w = &RegistrationWrite{}
 	w.Input = make(chan msg.Request, length)
 	w.Shutdown = make(chan struct{})
+	w.appLog = appLog
 	return
 }
 
@@ -61,7 +60,8 @@ func (w *RegistrationWrite) process(q *msg.Request) {
 func (w *RegistrationWrite) add(q *msg.Request, mr *msg.Result) {
 	var res sql.Result
 	var err error
-
+	Section := "Registration"
+	Action := "Add"
 	// generate RegistrationID
 	if q.Registration.ID, err = func() (string, error) {
 		u, e := uuid.NewV4()
@@ -70,6 +70,7 @@ func (w *RegistrationWrite) add(q *msg.Request, mr *msg.Result) {
 		}
 		return u.String(), nil
 	}(); err != nil {
+		w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -82,6 +83,7 @@ func (w *RegistrationWrite) add(q *msg.Request, mr *msg.Result) {
 		q.Registration.Port,
 		q.Registration.Database,
 	); err != nil {
+		w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -102,9 +104,11 @@ func (w *RegistrationWrite) remove(q *msg.Request, mr *msg.Result) {
 		port, database                       int64
 		registeredAt                         time.Time
 	)
-
+	Section := "Registration"
+	Action := "Remove"
 	// open transaction
 	if tx, err = w.conn.Begin(); err != nil {
+		w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -124,6 +128,7 @@ func (w *RegistrationWrite) remove(q *msg.Request, mr *msg.Result) {
 		tx.Rollback()
 		return
 	} else if err != nil {
+		w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		tx.Rollback()
 		return
@@ -144,6 +149,7 @@ func (w *RegistrationWrite) remove(q *msg.Request, mr *msg.Result) {
 	if res, err = tx.Stmt(w.stmtRemove).Exec(
 		q.Registration.ID,
 	); err != nil {
+		w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		tx.Rollback()
 		return
@@ -152,6 +158,7 @@ func (w *RegistrationWrite) remove(q *msg.Request, mr *msg.Result) {
 	// check result and close transaction
 	if mr.ExpectedRows(&res, 1) {
 		if err = tx.Commit(); err != nil {
+			w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 			mr.ServerError(err)
 			return
 		}
@@ -168,9 +175,11 @@ func (w *RegistrationWrite) update(q *msg.Request, mr *msg.Result) {
 		res sql.Result
 		err error
 	)
-
+	Section := "Registration"
+	Action := "Update"
 	// open transaction
 	if tx, err = w.conn.Begin(); err != nil {
+		w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -193,6 +202,7 @@ func (w *RegistrationWrite) update(q *msg.Request, mr *msg.Result) {
 	// check result and close transaction
 	if mr.ExpectedRows(&res, 1) {
 		if err = tx.Commit(); err != nil {
+			w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 			mr.ServerError(err)
 			return
 		}

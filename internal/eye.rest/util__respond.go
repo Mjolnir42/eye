@@ -180,6 +180,7 @@ func (x *Rest) respondV2(w *http.ResponseWriter, r *msg.Result) {
 
 	// internal result contains an error, copy over into protocol result
 	if r.Error != nil {
+		x.appLog.Tracef("Section=%s Action=%s Error=%s", protoRes.Section, protoRes.Action, r.Error.Error())
 		*protoRes.Errors = append(*protoRes.Errors, r.Error.Error())
 	}
 
@@ -236,6 +237,7 @@ func (x *Rest) respondV2(w *http.ResponseWriter, r *msg.Result) {
 	}
 
 	if bjson, err = json.Marshal(&protoRes); err != nil {
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", "Respond", "V2", err.Error())
 		hardInternalError(w)
 		return
 	}

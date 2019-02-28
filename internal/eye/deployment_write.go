@@ -24,18 +24,14 @@ type DeploymentWrite struct {
 	conn       *sql.DB
 	stmtExists *sql.Stmt
 	appLog     *logrus.Logger
-	reqLog     *logrus.Logger
-	errLog     *logrus.Logger
 }
 
 // newDeploymentWrite return a new DeploymentWrite handler with input buffer of length
-func newDeploymentWrite(length int, appLog, reqLog, errLog *logrus.Logger) (r *DeploymentWrite) {
+func newDeploymentWrite(length int, appLog *logrus.Logger) (r *DeploymentWrite) {
 	r = &DeploymentWrite{}
 	r.Input = make(chan msg.Request, length)
 	r.Shutdown = make(chan struct{})
 	r.appLog = appLog
-	r.reqLog = reqLog
-	r.errLog = errLog
 	return
 }
 
@@ -61,13 +57,14 @@ func (w *DeploymentWrite) process(q *msg.Request) {
 func (w *DeploymentWrite) notification(q *msg.Request, mr *msg.Result) {
 	var err error
 	var configurationID string
-
+	Section := "Deployment"
+	Action := "Notification"
 	if err = w.stmtExists.QueryRow(
 		q.Configuration.ID,
 	).Scan(
 		&configurationID,
 	); err != nil && err != sql.ErrNoRows {
-		w.appLog.Errorln(err)
+		w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		q.Reply <- *mr
 		return
@@ -86,6 +83,7 @@ func (w *DeploymentWrite) notification(q *msg.Request, mr *msg.Result) {
 			handler.Intake() <- *q
 			return
 		} else if err != nil {
+			w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 			mr.ServerError(err)
 			q.Reply <- *mr
 			return
@@ -99,6 +97,7 @@ func (w *DeploymentWrite) notification(q *msg.Request, mr *msg.Result) {
 			handler.Intake() <- *q
 			return
 		} else if err != nil {
+			w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 			mr.ServerError(err)
 			q.Reply <- *mr
 			return
@@ -118,7 +117,6 @@ func (w *DeploymentWrite) notification(q *msg.Request, mr *msg.Result) {
 	case msg.TaskRollout:
 		q.Action = msg.ActionUpdate
 	case msg.TaskDelete, msg.TaskDeprovision:
-		w.appLog.Infoln("Deprovision of check with id: ", q.Configuration.ID)
 		q.Action = msg.ActionRemove
 	}
 	handler.Intake() <- *q

@@ -10,7 +10,7 @@ package rest // import "github.com/solnx/eye/internal/eye.rest"
 
 import (
 	"fmt"
-	"log"
+
 	"net/http"
 	"net/url"
 	"strings"
@@ -38,9 +38,7 @@ func (x *Rest) somaStatusUpdate(r *msg.Result) {
 	default:
 		feedback = `success`
 	}
-	fmt.Println(r.FeedbackURL)
 	url := strings.Replace(r.FeedbackURL, `%7BSTATUS%7D`, feedback, -1)
-	fmt.Println(url)
 	client := resty.New().
 		// set generic client options
 		SetDisableWarn(true).
@@ -77,21 +75,20 @@ func (x *Rest) somaStatusUpdate(r *msg.Result) {
 	res, err := client.R().Patch(url)
 	if err != nil {
 		if len(r.Configuration) >= 1 {
-			log.Println(`RequestID`, r.ID.String(), `DeploymentID`, r.Configuration[0].ID, `Error`, err.Error())
+			x.appLog.Errorln(`RequestID`, r.ID.String(), `DeploymentID`, r.Configuration[0].ID, `Error`, err.Error())
 		} else {
-			log.Println(`RequestID`, r.ID.String(), `Error`, err.Error())
+			x.appLog.Errorln(`RequestID`, r.ID.String(), `Error`, err.Error())
 		}
 		return
 	}
-	fmt.Println("Successfully sent patch request to soma")
 
 	switch res.StatusCode() {
 	case http.StatusOK:
 	default:
 		if len(r.Configuration) >= 1 {
-			log.Println(`RequestID`, r.ID.String(), `DeploymentID`, r.Configuration[0].ID, res.StatusCode(), res.Status())
+			x.appLog.Errorln(`RequestID`, r.ID.String(), `DeploymentID`, r.Configuration[0].ID, res.StatusCode(), res.Status())
 		} else {
-			log.Println(`RequestID`, r.ID.String(), res.StatusCode(), res.Status())
+			x.appLog.Errorln(`RequestID`, r.ID.String(), res.StatusCode(), res.Status())
 		}
 	}
 }
@@ -100,7 +97,6 @@ func (x *Rest) somaStatusUpdate(r *msg.Result) {
 // on r and updates r.FeedbackURL if it is.
 func (x *Rest) somaSetFeedbackURL(r *msg.Request) {
 	if !r.Flags.SendDeploymentFeedback {
-		x.appLog.Infoln("We will not send deployment feedback")
 		r.FeedbackURL = ``
 		return
 	}
@@ -115,16 +111,13 @@ func (x *Rest) somaSetFeedbackURL(r *msg.Request) {
 		path = r.Notification.PathPrefix
 		feedbackID = r.Notification.ID.String()
 	}
-	x.appLog.Infof("Path: %s, ID: %s", path, feedbackID)
 	soma, _ := url.Parse(x.conf.Eye.SomaURL)
 
 	soma.Path = fmt.Sprintf("/%s/%s/{STATUS}",
 		path,
 		feedbackID,
 	)
-	x.appLog.Infoln("foldSlashes")
 	foldSlashes(soma)
-	x.appLog.Infoln("Set FeedbackURL to ", soma.String())
 	r.FeedbackURL = soma.String()
 	return
 }

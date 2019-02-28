@@ -37,18 +37,14 @@ type ConfigurationWrite struct {
 	stmtCfgShow                 *sql.Stmt
 	stmtActivationSet           *sql.Stmt
 	appLog                      *logrus.Logger
-	reqLog                      *logrus.Logger
-	errLog                      *logrus.Logger
 }
 
 // newConfigurationWrite return a new ConfigurationWrite handler with input buffer of length
-func newConfigurationWrite(length int, appLog, reqLog, errLog *logrus.Logger) (w *ConfigurationWrite) {
+func newConfigurationWrite(length int, appLog *logrus.Logger) (w *ConfigurationWrite) {
 	w = &ConfigurationWrite{}
 	w.Input = make(chan msg.Request, length)
 	w.Shutdown = make(chan struct{})
 	w.appLog = appLog
-	w.reqLog = reqLog
-	w.errLog = errLog
 	return
 }
 
@@ -87,7 +83,8 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 		skipInvalidatePrevious bool
 		previous               v2.Configuration
 	)
-
+	Section := "Configuration"
+	Action := "Add"
 	// fully populate Configuration before JSON encoding it
 	rolloutTS = time.Now().UTC()
 	dataID = uuid.Must(uuid.NewV4()).String()
@@ -99,11 +96,13 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 	q.Configuration.Data = []v2.Data{data}
 
 	if jsonb, err = json.Marshal(q.Configuration); err != nil {
+		w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
 
 	if tx, err = w.conn.Begin(); err != nil {
+		w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -188,6 +187,7 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 	}
 
 	if err = tx.Commit(); err != nil {
+		w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -206,6 +206,7 @@ func (w *ConfigurationWrite) add(q *msg.Request, mr *msg.Result) {
 	return
 
 abort:
+	w.appLog.Debugf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 	mr.ServerError(err)
 
 rollback:
@@ -224,7 +225,8 @@ func (w *ConfigurationWrite) remove(q *msg.Request, mr *msg.Result) {
 		configuration             v2.Configuration
 		data                      v2.Data
 	)
-
+	Section := "Configuration"
+	Action := "Remove"
 	transactionTS = time.Now().UTC()
 
 	// deprovision requests have a 15 minute grace window to send the
@@ -246,6 +248,7 @@ func (w *ConfigurationWrite) remove(q *msg.Request, mr *msg.Result) {
 
 	// open transaction
 	if tx, err = w.conn.Begin(); err != nil {
+		w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -322,6 +325,7 @@ func (w *ConfigurationWrite) remove(q *msg.Request, mr *msg.Result) {
 
 commitTx:
 	if err = tx.Commit(); err != nil {
+		w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -329,6 +333,7 @@ commitTx:
 	return
 
 abort:
+	w.appLog.Debugf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 	mr.ServerError(err)
 
 rollback:
@@ -347,10 +352,12 @@ func (w *ConfigurationWrite) update(q *msg.Request, mr *msg.Result) {
 		prevCfg        v2.Configuration
 		data, prevData v2.Data
 	)
-
+	Section := "Configuration"
+	Action := "Update"
 	transactionTS = time.Now().UTC()
 
 	if tx, err = w.conn.Begin(); err != nil {
+		w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -444,6 +451,7 @@ func (w *ConfigurationWrite) update(q *msg.Request, mr *msg.Result) {
 	return
 
 abort:
+	w.appLog.Debugf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 	mr.ServerError(err)
 
 rollback:
@@ -455,10 +463,12 @@ rollback:
 func (w *ConfigurationWrite) activate(q *msg.Request, mr *msg.Result) {
 	var err error
 	var res sql.Result
-
+	Section := "Configuration"
+	Action := "Activate"
 	if res, err = w.stmtActivationSet.Exec(
 		q.Configuration.ID,
 	); err != nil {
+		w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}

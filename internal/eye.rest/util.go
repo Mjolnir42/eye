@@ -72,22 +72,6 @@ func processDeploymentDetails(details *proto.Deployment) (string, v2.Configurati
 		Thresholds: []v2.Threshold{},
 	}
 
-	// append filesystem to disk metrics
-	switch config.Metric {
-	case
-		`disk.write.per.second`,
-		`disk.read.per.second`,
-		`disk.free`,
-		`disk.usage.percent`:
-		mountpoint := getServiceAttributeValue(details, `filesystem`)
-		if mountpoint == `` {
-			return ``, v2.Configuration{}, fmt.Errorf("Disk metric %s is missing filesystem service attribute", config.Metric)
-		}
-
-		// update metric path and recalculate updated lookupID
-		config.Metric = fmt.Sprintf("%s:%s", config.Metric, mountpoint)
-		lookupID = calculateLookupID(details.Node.Name, details.Metric.Path)
-	}
 	config.LookupID = lookupID
 
 	// set oncall duty

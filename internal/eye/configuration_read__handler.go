@@ -23,8 +23,6 @@ import (
 func (r *ConfigurationRead) Register(c *sql.DB, l ...*logrus.Logger) {
 	r.conn = c
 	r.appLog = l[0]
-	r.reqLog = l[1]
-	r.errLog = l[2]
 }
 
 // Run is the event loop for ConfigurationRead
@@ -41,7 +39,7 @@ func (r *ConfigurationRead) Run() {
 		stmt.CfgVersion:     &r.stmtCfgVersion,
 	} {
 		if *prepStmt, err = r.conn.Prepare(statement); err != nil {
-			r.errLog.Fatal(`configuration_r`, err, stmt.Name(statement))
+			r.appLog.Fatal(`configuration_r`, err, stmt.Name(statement))
 		}
 		defer (*prepStmt).Close()
 	}

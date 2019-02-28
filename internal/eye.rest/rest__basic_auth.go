@@ -11,15 +11,15 @@ package rest // import "github.com/solnx/eye/internal/eye.rest"
 import (
 	"bytes"
 	"encoding/base64"
-	"log"
+
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
+	uuid "github.com/satori/go.uuid"
 	"github.com/solnx/eye/internal/eye"
 	msg "github.com/solnx/eye/internal/eye.msg"
-	uuid "github.com/satori/go.uuid"
 )
 
 // BasicAuth handles HTTP BasicAuth on requests
@@ -91,7 +91,7 @@ func (x *Rest) BasicAuth(h httprouter.Handle) httprouter.Handle {
 
 					result := <-request.Reply
 					if result.Error != nil {
-						log.Println(result.Error.Error()) // XXX
+						x.appLog.Errorln(result.Error.Error()) // XXX
 					}
 
 					if result.Super.Verdict == msg.VerdictOK {

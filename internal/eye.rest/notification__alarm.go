@@ -10,7 +10,6 @@ package rest // import "github.com/solnx/eye/internal/eye.rest"
 
 import (
 	"bytes"
-	"log"
 	"net/http"
 	"time"
 
@@ -32,7 +31,6 @@ configurationloop:
 
 		body := &bytes.Buffer{}
 		x.tmpl.Execute(body, snap)
-
 		go func(b []byte, uri string, mr *msg.Result, idx int) {
 			res, err := resty.New().
 				// set generic client options
@@ -71,13 +69,15 @@ configurationloop:
 				Post(uri)
 
 			if err != nil {
-				log.Println(`RequestID`, mr.ID.String(), `DeploymentID`, mr.Configuration[idx].ID, `Error`, err.Error())
+
+				x.appLog.Errorf(`Error clearing alarm for RequestID: %s DeploymentID: %s Error: %s`, mr.ID.String(), mr.Configuration[idx].ID, err.Error())
 				return
 			}
 			switch res.StatusCode() {
 			case http.StatusOK:
+				x.appLog.Debugln(`Alarm clearing for RequestID: %s DeploymentID: %s Status: %s`, mr.ID.String(), mr.Configuration[idx].ID, res.Status())
 			default:
-				log.Println(`RequestID`, mr.ID.String(), `DeploymentID`, mr.Configuration[idx].ID, res.StatusCode(), res.Status())
+				x.appLog.Errorln(`Invalid status on alarm clearing for RequestID: %s DeploymentID: %s Status: %s`, mr.ID.String(), mr.Configuration[idx].ID, res.Status())
 			}
 		}(body.Bytes(), x.conf.Eye.AlarmEndpoint, r, i)
 	}

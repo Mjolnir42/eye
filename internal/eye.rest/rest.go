@@ -40,11 +40,8 @@ type Rest struct {
 	// notification template
 	tmpl *template.Template
 	// cache invalidator
-	invl     *wall.Invalidation
-	appLog   *logrus.Logger
-	reqLog   *logrus.Logger
-	errLog   *logrus.Logger
-	auditLog *logrus.Logger
+	invl   *wall.Invalidation
+	appLog *logrus.Logger
 }
 
 // New returns a new REST interface
@@ -52,7 +49,7 @@ func New(
 	authorizationFunction func(*msg.Request) bool,
 	appHandlerMap *eye.HandlerMap,
 	conf *erebos.Config,
-	appLog, reqLog, errLog, auditLog *logrus.Logger,
+	appLog *logrus.Logger,
 ) *Rest {
 	x := Rest{}
 	x.isAuthorized = authorizationFunction
@@ -63,9 +60,6 @@ func New(
 	x.tmpl = template.Must(template.ParseFiles(conf.Eye.AlarmTemplateFile))
 	x.invl = wall.NewInvalidation(conf)
 	x.appLog = appLog
-	x.reqLog = reqLog
-	x.errLog = errLog
-	x.auditLog = auditLog
 	return &x
 }
 

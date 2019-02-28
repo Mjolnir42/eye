@@ -13,8 +13,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/go-resty/resty"
 	"github.com/solnx/eye/lib/eye.proto/v2"
 )
@@ -38,12 +36,11 @@ func (l *Lookup) v2LookupEye(lookID string) (*v2.Result, error) {
 	default:
 		return nil, fmt.Errorf("eyewall.Lookup: %s", resp.String())
 	}
-	
+
 	result, err = v2Result(resp.Body())
 	switch err {
 	case nil:
 		// success
-		spew.Dump(resp.Body())
 		return result, nil
 	case ErrUnconfigured:
 		// no profiles for lookID

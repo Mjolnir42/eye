@@ -44,8 +44,6 @@ func NewPermissiveSupervisor(c *erebos.Config) *PermissiveSupervisor {
 func (s *PermissiveSupervisor) Register(c *sql.DB, l ...*logrus.Logger) {
 	s.conn = c
 	s.appLog = l[0]
-	s.reqLog = l[1]
-	s.errLog = l[2]
 }
 
 // RegisterAuditLog initializes the audit log provided by the Soma app

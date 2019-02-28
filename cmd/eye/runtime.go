@@ -21,9 +21,6 @@ type runtime struct {
 	conf        *erebos.Config
 	conn        *sql.DB
 	appLog      *logrus.Logger
-	errLog      *logrus.Logger
-	reqLog      *logrus.Logger
-	auditLog    *logrus.Logger
 	dbConnected bool
 	logFileMap  *eye.LogHandleMap
 }
@@ -35,7 +32,7 @@ func (run *runtime) logrotate(sigChan chan os.Signal) {
 			for name := range run.logFileMap.Range() {
 				lfHandle := run.logFileMap.Get(name)
 				if err := lfHandle.Reopen(); err != nil {
-					run.errLog.Errorf("Error rotating logfile %s: %s\n", name, err)
+					run.appLog.Errorf("Error rotating logfile %s: %s\n", name, err)
 					continue
 				}
 				run.appLog.Printf("Rotated logfile: %s", name)

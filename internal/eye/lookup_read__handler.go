@@ -23,8 +23,6 @@ import (
 func (r *LookupRead) Register(c *sql.DB, l ...*logrus.Logger) {
 	r.conn = c
 	r.appLog = l[0]
-	r.reqLog = l[1]
-	r.errLog = l[2]
 }
 
 // Run is the event loop for LookupRead
@@ -37,7 +35,7 @@ func (r *LookupRead) Run() {
 		stmt.LookupPending:       &r.stmtPending,
 	} {
 		if *prepStmt, err = r.conn.Prepare(statement); err != nil {
-			r.errLog.Fatal(`lookup`, err, stmt.Name(statement))
+			r.appLog.Fatal(`lookup`, err, stmt.Name(statement))
 		}
 		defer (*prepStmt).Close()
 	}

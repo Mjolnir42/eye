@@ -22,8 +22,6 @@ import (
 func (r *RegistrationRead) Register(c *sql.DB, l ...*logrus.Logger) {
 	r.conn = c
 	r.appLog = l[0]
-	r.reqLog = l[1]
-	r.errLog = l[2]
 }
 
 // Run is the event loop for RegistrationRead
@@ -36,7 +34,7 @@ func (r *RegistrationRead) Run() {
 		stmt.RegistryShow:   &r.stmtShow,
 	} {
 		if *prepStmt, err = r.conn.Prepare(statement); err != nil {
-			r.errLog.Fatal(`lookup`, err, stmt.Name(statement))
+			r.appLog.Fatal(`lookup`, err, stmt.Name(statement))
 		}
 		defer (*prepStmt).Close()
 	}

@@ -29,7 +29,6 @@ import (
 func (x *Rest) DeploymentNotification(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
-	x.appLog.Println("DeploymentNotification: ", r.RequestURI)
 	// craft internal request message
 	request := msg.New(r, params)
 	request.Section = msg.SectionDeployment
@@ -37,7 +36,7 @@ func (x *Rest) DeploymentNotification(w http.ResponseWriter, r *http.Request,
 	// decode client payload
 	clientReq := proto.NewPushNotification()
 	if err := decodeJSONBody(r, &clientReq); err != nil {
-		x.appLog.Errorln("decode error: ", err.Error())
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyUnprocessableEntity(&w, &request, err)
 		return
 	}
@@ -48,7 +47,7 @@ func (x *Rest) DeploymentNotification(w http.ResponseWriter, r *http.Request,
 		return filepath.IsAbs(str)
 	})
 	if ok, err := govalidator.ValidateStruct(clientReq); !ok {
-		x.appLog.Errorln("validation error: ", err.Error())
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyUnprocessableEntity(&w, &request, err)
 		return
 	}
@@ -68,7 +67,6 @@ func (x *Rest) DeploymentNotification(w http.ResponseWriter, r *http.Request,
 
 	// request authorization for request
 	if !x.isAuthorized(&request) {
-		x.appLog.Infoln("Not authorized, forbidden: ", request.ID.String())
 		x.replyForbidden(&w, &request, nil)
 		return
 	}
@@ -81,7 +79,6 @@ func (x *Rest) DeploymentNotification(w http.ResponseWriter, r *http.Request,
 func (x *Rest) DeploymentProcess(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
-	x.appLog.Println("DeploymentProcess: ", r.RequestURI)
 	request := msg.New(r, params)
 	request.Section = msg.SectionDeployment
 	request.Action = msg.ActionProcess
@@ -89,22 +86,26 @@ func (x *Rest) DeploymentProcess(w http.ResponseWriter, r *http.Request,
 	var err error
 	cReq := proto.NewDeploymentResult()
 	if err = decodeJSONBody(r, &cReq); err != nil {
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyUnprocessableEntity(&w, &request, err)
 		return
 	}
 
 	if err = resolveFlags(nil, &request); err != nil {
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
 
 	if len(*cReq.Deployments) != 1 {
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, fmt.Errorf("Deployment count %d != 1", len(*cReq.Deployments)))
 		x.replyUnprocessableEntity(&w, &request, fmt.Errorf("Deployment count %d != 1", len(*cReq.Deployments)))
 		return
 	}
 
 	request.ConfigurationTask = (*cReq.Deployments)[0].Task
 	if request.LookupHash, request.Configuration, err = processDeploymentDetails(&(*cReq.Deployments)[0]); err != nil {
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyInternalError(&w, &request, err)
 		return
 	}
@@ -116,6 +117,11 @@ func (x *Rest) DeploymentProcess(w http.ResponseWriter, r *http.Request,
 	// called via v1 update API PUT:/api/v1/item/:ID
 	case `PUT`:
 		if request.Configuration.ID != params.ByName(`ID`) {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, fmt.Errorf(
+				"Mismatched IDs in update: [%s] vs [%s]",
+				request.Configuration.ID,
+				params.ByName(`ID`),
+			))
 			x.replyBadRequest(&w, &request, fmt.Errorf(
 				"Mismatched IDs in update: [%s] vs [%s]",
 				request.Configuration.ID,
@@ -127,6 +133,11 @@ func (x *Rest) DeploymentProcess(w http.ResponseWriter, r *http.Request,
 		// v1 PUT API returned an error if the deployment was not
 		// a rollout
 		if request.ConfigurationTask != msg.TaskRollout {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, fmt.Errorf(
+				"Update for ID %s is not a rollout (%s)",
+				params.ByName(`ID`),
+				request.ConfigurationTask,
+			))
 			x.replyBadRequest(&w, &request, fmt.Errorf(
 				"Update for ID %s is not a rollout (%s)",
 				params.ByName(`ID`),
@@ -139,6 +150,11 @@ func (x *Rest) DeploymentProcess(w http.ResponseWriter, r *http.Request,
 			// v1 POST API returned an error if the deployment was not
 			// a rollout
 			if request.ConfigurationTask != msg.TaskRollout {
+				x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, fmt.Errorf(
+					"Update for ID %s is not a rollout (%s)",
+					params.ByName(`ID`),
+					request.ConfigurationTask,
+				))
 				x.replyBadRequest(&w, &request, fmt.Errorf(
 					"Update for ID %s is not a rollout (%s)",
 					params.ByName(`ID`),
@@ -177,7 +193,6 @@ func (x *Rest) fetchPushDeployment(w *http.ResponseWriter, q *msg.Request) {
 
 	foldSlashes(soma)
 	detailsDownload := soma.String()
-	x.appLog.Infoln("Download details from: ", detailsDownload)
 	// fetch DeploymentDetails inside concurrency limited go routine
 	// without blocking the full handler within the limiter
 	done := make(chan struct{})
@@ -218,12 +233,10 @@ func (x *Rest) fetchPushDeployment(w *http.ResponseWriter, q *msg.Request) {
 
 		close(sig)
 	}(done, resp, detailsDownload, err)
-	x.appLog.Infoln("Download started")
 	// block on running go routine
 	<-done
-	x.appLog.Infoln("Download completed")
 	if err != nil {
-		x.appLog.Errorln("Error on fetch: ", err.Error())
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", "Deployment", "fetchPushDeployment", err.Error())
 		x.replyGatewayTimeout(w, q, err)
 		return
 	}
@@ -254,33 +267,26 @@ func (x *Rest) fetchPushDeployment(w *http.ResponseWriter, q *msg.Request) {
 	}
 
 	q.ConfigurationTask = (*res.Deployments)[0].Task
-	x.appLog.Infoln("Process deployment details...")
 	if q.LookupHash, q.Configuration, err = processDeploymentDetails(&(*res.Deployments)[0]); err != nil {
-		x.appLog.Errorln("Error: ", err.Error())
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", "Deployment", "fetchPushDeployment", err.Error())
 		x.replyInternalError(w, q, err)
 		return
 	}
 	x.appLog.Infoln("Deployment processed, lookup hash: ", q.LookupHash)
 	if err := resolveFlags(nil, q); err != nil {
-		x.appLog.Errorln("Error: ", err.Error())
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", "Deployment", "fetchPushDeployment", err.Error())
 		x.replyBadRequest(w, q, err)
 		return
 	}
-	x.appLog.Infoln("Dummy1")
 	// build URL to send deployment feedback
 	x.somaSetFeedbackURL(q)
-	x.appLog.Infoln("Dummy2")
 	if !x.isAuthorized(q) {
-		x.appLog.Infoln("Dummy3")
 		x.replyForbidden(w, q, nil)
 		return
 	}
-	x.appLog.Infoln("Dummy4")
 	handler := x.handlerMap.Get(`deployment_w`)
-	x.appLog.Infoln("Queued in deployment_w")
 	handler.Intake() <- *q
 	result := <-q.Reply
-	x.appLog.Infoln("Send result %d to %s ", result.Code, q.FeedbackURL)
 	x.respond(w, &result)
 }
 

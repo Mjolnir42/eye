@@ -34,6 +34,7 @@ func (x *Rest) ConfigurationShow(w http.ResponseWriter, r *http.Request,
 	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
@@ -53,7 +54,7 @@ func (x *Rest) ConfigurationShow(w http.ResponseWriter, r *http.Request,
 func (x *Rest) ConfigurationList(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
-	x.appLog.Println("ConfigurationList: ", r.RequestURI)
+
 	request := msg.New(r, params)
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionList
@@ -73,7 +74,7 @@ func (x *Rest) ConfigurationList(w http.ResponseWriter, r *http.Request,
 func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
-	x.appLog.Println("ConfigurationAdd: ", r.RequestURI)
+
 	request := msg.New(r, params)
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionAdd
@@ -82,6 +83,7 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 	case msg.ProtocolOne:
 		cReq := &v1.ConfigurationItem{}
 		if err := decodeJSONBody(r, cReq); err != nil {
+			x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyUnprocessableEntity(&w, &request, err)
 			return
 		}
@@ -90,6 +92,7 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 	case msg.ProtocolTwo:
 		cReq := v2.NewConfigurationRequest()
 		if err := decodeJSONBody(r, &cReq); err != nil {
+			x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyUnprocessableEntity(&w, &request, err)
 			return
 		}
@@ -97,6 +100,7 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 
 		// only the v2 API has request flags
 		if err := resolveFlags(&cReq, &request); err != nil {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyBadRequest(&w, &request, err)
 			return
 		}
@@ -130,7 +134,7 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
-	x.appLog.Println("ConfigurationUpdate: ", r.RequestURI)
+
 	request := msg.New(r, params)
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionUpdate
@@ -139,6 +143,7 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	case msg.ProtocolOne:
 		cReq := &v1.ConfigurationItem{}
 		if err := decodeJSONBody(r, cReq); err != nil {
+			x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyUnprocessableEntity(&w, &request, err)
 			return
 		}
@@ -147,6 +152,7 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	case msg.ProtocolTwo:
 		cReq := v2.NewConfigurationRequest()
 		if err := decodeJSONBody(r, &cReq); err != nil {
+			x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyUnprocessableEntity(&w, &request, err)
 			return
 		}
@@ -154,6 +160,7 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 
 		// only the v2 API has request flags
 		if err := resolveFlags(&cReq, &request); err != nil {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyBadRequest(&w, &request, err)
 			return
 		}
@@ -171,6 +178,11 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	request.Configuration.LookupID = request.LookupHash
 
 	if request.Configuration.ID != strings.ToLower(params.ByName(`ID`)) {
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, fmt.Errorf(
+			"Mismatched IDs in update: [%s] vs [%s]",
+			request.Configuration.ID,
+			strings.ToLower(params.ByName(`ID`)),
+		))
 		x.replyBadRequest(&w, &request, fmt.Errorf(
 			"Mismatched IDs in update: [%s] vs [%s]",
 			request.Configuration.ID,
@@ -179,6 +191,7 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	}
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
@@ -200,7 +213,6 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 func (x *Rest) ConfigurationRemove(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
-	x.appLog.Println("ConfigurationRemove: ", r.RequestURI)
 
 	request := msg.New(r, params)
 	request.Section = msg.SectionConfiguration
@@ -208,6 +220,7 @@ func (x *Rest) ConfigurationRemove(w http.ResponseWriter, r *http.Request,
 	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
@@ -217,11 +230,13 @@ func (x *Rest) ConfigurationRemove(w http.ResponseWriter, r *http.Request,
 	if request.Version != msg.ProtocolOne {
 		cReq := v2.NewConfigurationRequest()
 		if err := decodeJSONBody(r, &cReq); err != nil {
+			x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyBadRequest(&w, &request, err)
 			return
 		}
 
 		if err := resolveFlags(&cReq, &request); err != nil {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyBadRequest(&w, &request, err)
 			return
 		}
@@ -245,13 +260,13 @@ func (x *Rest) ConfigurationActivate(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
 
-	x.appLog.Println("ConfigurationActivate: ", r.RequestURI)
 	request := msg.New(r, params)
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionActivate
 	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
@@ -273,13 +288,13 @@ func (x *Rest) ConfigurationHistory(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
 	defer panicCatcher(w)
 
-	x.appLog.Println("ConfigurationHistory: ", r.RequestURI)
 	request := msg.New(r, params)
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionHistory
 	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
@@ -302,7 +317,6 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 	defer panicCatcher(w)
 	var err error
 
-	x.appLog.Println("ConfigurationVersion: ", r.RequestURI)
 	request := msg.New(r, params)
 	request.Section = msg.SectionConfiguration
 	request.Action = msg.ActionVersion
@@ -319,6 +333,7 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 	if _, err = uuid.FromString(
 		request.Search.Configuration.ID,
 	); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
@@ -331,6 +346,7 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 	))
 	if dataID != `` {
 		if _, err = uuid.FromString(dataID); err != nil {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyBadRequest(&w, &request, err)
 			return
 		}
@@ -345,6 +361,7 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 	// optional, but if it is set then it must be a parsable RFC3339
 	// timestamp
 	if err = r.ParseForm(); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyInternalError(&w, &request, err)
 		return
 	}
@@ -353,6 +370,7 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 			time.RFC3339Nano,
 			valid,
 		); err != nil {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyInternalError(&w, &request, err)
 			return
 		}
@@ -362,6 +380,7 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 	// while both dataID and valid are optional, one of them must be
 	// provided
 	if request.Search.ValidAt.IsZero() && dataID == `` {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, nil)
 		return
 	}

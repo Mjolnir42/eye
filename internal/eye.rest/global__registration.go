@@ -23,7 +23,6 @@ import (
 // RegistrationShow accepts requests to retrieve a specific registration
 func (x *Rest) RegistrationShow(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
-	x.appLog.Infoln("New RegistrationShow request")
 	defer panicCatcher(w)
 
 	request := msg.New(r, params)
@@ -51,7 +50,6 @@ func (x *Rest) RegistrationShow(w http.ResponseWriter, r *http.Request,
 // contains URL query parameters that indicate a search request, the
 // returned list will be filtered for those search terms
 func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	x.appLog.Infoln("New RegistrationList request")
 	defer panicCatcher(w)
 	request := msg.New(r, params)
 	request.Section = msg.SectionRegistration
@@ -60,8 +58,8 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request, params h
 	// parse URL query parameters to differentiate between ActionList
 	// and ActionSearch. Any number of parameters can be specified at
 	// the same time
-	x.appLog.Infoln("Dummy1")
 	if err := r.ParseForm(); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
@@ -73,17 +71,18 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request, params h
 		request.Action = msg.ActionSearch
 		request.Search.Registration.Address = addr
 	}
-	x.appLog.Infoln("Dummy2")
 	if port := r.Form.Get(`port`); port != `` {
 		if iPort, err := strconv.ParseInt(port, 10, 64); err == nil {
 			request.Search.Registration.Port = iPort
 		} else {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyBadRequest(&w, &request, err)
 			return
 		}
 		request.Action = msg.ActionSearch
 		// negative+zero port numbers are invalid
 		if request.Search.Registration.Port <= 0 {
+			x.appLog.Tracef("Section=%s Action=%s Error=%s", request.Section, request.Action, "negative+zero port numbers are invalid")
 			x.replyBadRequest(&w, &request, nil)
 			return
 		}
@@ -91,17 +90,18 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request, params h
 		// no zero-value 0 handling since port 0 (== port autoselect) is
 		// invalid
 	}
-	x.appLog.Infoln("Dummy3")
 	if db := r.Form.Get(`database`); db != `` {
 		if iDb, err := strconv.ParseInt(db, 10, 64); err == nil {
 			request.Search.Registration.Database = iDb
 		} else {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyBadRequest(&w, &request, err)
 			return
 		}
 		request.Action = msg.ActionSearch
 		// negative database numbers are invalid
 		if request.Search.Registration.Database < 0 {
+			x.appLog.Tracef("Section=%s Action=%s Error=%s", request.Section, request.Action, "negative database numbers are invalid")
 			x.replyBadRequest(&w, &request, nil)
 			return
 		}
@@ -114,13 +114,10 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request, params h
 			request.Search.Registration.Database = -1
 		}
 	}
-	x.appLog.Infoln("Dummy4 - Pre Auth")
 	if !x.isAuthorized(&request) {
-		fmt.Println("Unauthorized")
 		x.replyForbidden(&w, &request, nil)
 		return
 	}
-	x.appLog.Infoln("Dummy5 - Dispatch")
 	handler := x.handlerMap.Get(`registration_r`)
 	handler.Intake() <- request
 	result := <-request.Reply
@@ -130,8 +127,7 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request, params h
 // RegistrationAdd accepts requests to add a registration
 func (x *Rest) RegistrationAdd(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
-	x.appLog.Infoln("New RegistrationAdd request")
-	fmt.Println("New RegistrationAdd request")
+
 	defer panicCatcher(w)
 
 	request := msg.New(r, params)
@@ -140,15 +136,13 @@ func (x *Rest) RegistrationAdd(w http.ResponseWriter, r *http.Request,
 
 	cReq := v2.NewRegistrationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
-		fmt.Println(err.Error())
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
 	request.Registration = *cReq.Registration
-	x.appLog.Infoln("received new registration request")
 	if !x.isAuthorized(&request) {
 		x.replyForbidden(&w, &request, nil)
-		x.appLog.Infoln("reply unauthorized")
 		return
 	}
 
@@ -161,7 +155,6 @@ func (x *Rest) RegistrationAdd(w http.ResponseWriter, r *http.Request,
 // RegistrationUpdate accepts requests to update a registration
 func (x *Rest) RegistrationUpdate(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
-	x.appLog.Infoln("New RegistrationUpdate request")
 	defer panicCatcher(w)
 
 	request := msg.New(r, params)
@@ -170,12 +163,19 @@ func (x *Rest) RegistrationUpdate(w http.ResponseWriter, r *http.Request,
 
 	cReq := v2.NewRegistrationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
 	request.Registration = *cReq.Registration
 
 	if request.Registration.ID != params.ByName(`ID`) {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, fmt.Errorf(
+			"Mismatched IDs in update: [%s] vs [%s]",
+			request.Registration.ID,
+			params.ByName(`ID`),
+		))
+
 		x.replyBadRequest(&w, &request, fmt.Errorf(
 			"Mismatched IDs in update: [%s] vs [%s]",
 			request.Registration.ID,
@@ -197,7 +197,6 @@ func (x *Rest) RegistrationUpdate(w http.ResponseWriter, r *http.Request,
 // RegistrationRemove accepts requests to remove a registration
 func (x *Rest) RegistrationRemove(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
-	x.appLog.Infoln("New RegistrationRemove request")
 	defer panicCatcher(w)
 
 	request := msg.New(r, params)
@@ -208,6 +207,7 @@ func (x *Rest) RegistrationRemove(w http.ResponseWriter, r *http.Request,
 	// request body may contain request flag overrides
 	cReq := v2.NewRegistrationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}

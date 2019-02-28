@@ -11,7 +11,7 @@ package main // import "github.com/solnx/eye/cmd/eye"
 import (
 	"database/sql"
 	"fmt"
-	"log"
+
 	"time"
 
 	"github.com/lib/pq"
@@ -56,22 +56,22 @@ func (run *runtime) connectDatabase() {
 	run.appLog.Println(`Opening connection to postgreSQL database`)
 	run.conn, err = sql.Open(driver, connect)
 	if err != nil {
-		run.errLog.Fatal(`Opening new database connection: `, err)
+		run.appLog.Fatal(`Opening new database connection: `, err)
 	}
 	if err = run.conn.Ping(); err != nil {
-		log.Fatal(`Testing new database connection: `, err)
+		run.appLog.Fatal(`Testing new database connection: `, err)
 	}
 	run.dbConnected = true
 	run.appLog.Println(`Database connection is alive`)
 
 	run.appLog.Println(`Setting database connection timezone to: UTC`)
 	if _, err = run.conn.Exec(stmt.DatabaseTimezone); err != nil {
-		run.errLog.Fatal(`Setting session timezone: `, err)
+		run.appLog.Fatal(`Setting session timezone: `, err)
 	}
 
 	run.appLog.Println(`Setting transaction isolation level to: SERIALIZABLE`)
 	if _, err = run.conn.Exec(stmt.DatabaseIsolationLevel); err != nil {
-		run.errLog.Fatal(`Setting transaction level: `, err)
+		run.appLog.Fatal(`Setting transaction level: `, err)
 	}
 
 	// size the connection pool
@@ -86,7 +86,7 @@ func (run *runtime) connectDatabase() {
 
 	// verify schema versions
 	if rows, err = run.conn.Query(stmt.DatabaseSchemaVersion); err != nil {
-		run.errLog.Fatal("Query db schema versions: ", err)
+		run.appLog.Fatal("Query db schema versions: ", err)
 	}
 
 rowloop:
@@ -95,29 +95,29 @@ rowloop:
 			&schema,
 			&version,
 		); err != nil {
-			run.errLog.Fatal(`DB schema check: `, err)
+			run.appLog.Fatal(`DB schema check: `, err)
 		}
 		if rsv, ok := required[schema]; ok {
 			if rsv != version {
-				run.errLog.Fatalf("Incompatible schema %s: %d != %d", schema, rsv, version)
+				run.appLog.Fatalf("Incompatible schema %s: %d != %d", schema, rsv, version)
 			}
 
 			run.appLog.Printf("Detected DB schema %s, version: %d", schema, version)
 			delete(required, schema)
 			continue rowloop
 		}
-		run.errLog.Fatal(`Unknown registered schema: `, schema)
+		run.appLog.Fatal(`Unknown registered schema: `, schema)
 	}
 
 	if err = rows.Err(); err != nil {
-		run.errLog.Fatal(`DB schema check: `, err)
+		run.appLog.Fatal(`DB schema check: `, err)
 	}
 
 	if len(required) != 0 {
 		for s := range required {
-			run.errLog.Printf("Missing database schema: %s", s)
+			run.appLog.Printf("Missing database schema: %s", s)
 		}
-		run.errLog.Fatal(`DB schema check: incomplete database`)
+		run.appLog.Fatal(`DB schema check: incomplete database`)
 	}
 }
 
@@ -137,7 +137,7 @@ waitForConn:
 		<-ticker
 		err := run.conn.Ping()
 		if err != nil {
-			run.errLog.Print(`main.runtime.pingDatabase: `, err)
+			run.appLog.Warn(`main.runtime.pingDatabase: `, err)
 		}
 	}
 }

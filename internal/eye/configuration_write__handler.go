@@ -23,8 +23,6 @@ import (
 func (w *ConfigurationWrite) Register(c *sql.DB, l ...*logrus.Logger) {
 	w.conn = c
 	w.appLog = l[0]
-	w.reqLog = l[1]
-	w.errLog = l[2]
 }
 
 // Run is the event loop for ConfigurationWrite
@@ -45,7 +43,7 @@ func (w *ConfigurationWrite) Run() {
 		stmt.ActivationSet:           &w.stmtActivationSet,
 	} {
 		if *prepStmt, err = w.conn.Prepare(statement); err != nil {
-			w.errLog.Fatal(`lookup`, err, stmt.Name(statement))
+			w.appLog.Fatal(`lookup`, err, stmt.Name(statement))
 		}
 		defer (*prepStmt).Close()
 	}

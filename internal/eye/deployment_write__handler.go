@@ -23,8 +23,6 @@ import (
 func (w *DeploymentWrite) Register(c *sql.DB, l ...*logrus.Logger) {
 	w.conn = c
 	w.appLog = l[0]
-	w.reqLog = l[1]
-	w.errLog = l[2]
 }
 
 // Run is the event loop for DeploymentWrite
@@ -35,7 +33,7 @@ func (w *DeploymentWrite) Run() {
 		stmt.CfgExists: &w.stmtExists,
 	} {
 		if *prepStmt, err = w.conn.Prepare(statement); err != nil {
-			w.errLog.Fatal(`deployment`, err, stmt.Name(statement))
+			w.appLog.Fatal(`deployment`, err, stmt.Name(statement))
 		}
 		defer (*prepStmt).Close()
 	}

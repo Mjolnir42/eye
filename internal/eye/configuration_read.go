@@ -35,15 +35,14 @@ type ConfigurationRead struct {
 	stmtProvInfo       *sql.Stmt
 	stmtCfgVersion     *sql.Stmt
 	appLog             *logrus.Logger
-	reqLog             *logrus.Logger
-	errLog             *logrus.Logger
 }
 
 // newConfigurationRead return a new ConfigurationRead handler with input buffer of length
-func newConfigurationRead(length int) (r *ConfigurationRead) {
+func newConfigurationRead(length int, appLog *logrus.Logger) (r *ConfigurationRead) {
 	r = &ConfigurationRead{}
 	r.Input = make(chan msg.Request, length)
 	r.Shutdown = make(chan struct{})
+	r.appLog = appLog
 	return
 }
 
@@ -73,8 +72,10 @@ func (r *ConfigurationRead) list(q *msg.Request, mr *msg.Result) {
 		rows            *sql.Rows
 		err             error
 	)
-
+	Section := "Configuration"
+	Action := "List"
 	if rows, err = r.stmtCfgList.Query(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -82,6 +83,7 @@ func (r *ConfigurationRead) list(q *msg.Request, mr *msg.Result) {
 	for rows.Next() {
 		if err = rows.Scan(&configurationID); err != nil {
 			rows.Close()
+			r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 			mr.ServerError(err)
 			return
 		}
@@ -90,6 +92,7 @@ func (r *ConfigurationRead) list(q *msg.Request, mr *msg.Result) {
 		})
 	}
 	if err = rows.Err(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -108,9 +111,11 @@ func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
 		provisionTS, deprovisionTS, activatedAt time.Time
 		tx                                      *sql.Tx
 	)
-
+	Section := "Configuration"
+	Action := "Show"
 	// open transaction
 	if tx, err = r.conn.Begin(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -188,6 +193,7 @@ func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
 	mr.Configuration = append(mr.Configuration, configuration)
 
 	if err = tx.Commit(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -195,6 +201,7 @@ func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
 	return
 
 abort:
+	r.appLog.Debugf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 	mr.ServerError(err)
 
 rollback:
@@ -214,12 +221,14 @@ func (r *ConfigurationRead) history(q *msg.Request, mr *msg.Result) {
 		tasks                                   []string
 		configuration                           v2.Configuration
 	)
-
+	Section := "Configuration"
+	Action := "History"
 	configuration.ID = q.Configuration.ID
 	configuration.Data = []v2.Data{}
 
 	// open transaction
 	if tx, err = r.conn.Begin(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -339,6 +348,7 @@ func (r *ConfigurationRead) history(q *msg.Request, mr *msg.Result) {
 	mr.Configuration = append(mr.Configuration, configuration)
 
 	if err = tx.Commit(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -346,6 +356,7 @@ func (r *ConfigurationRead) history(q *msg.Request, mr *msg.Result) {
 	return
 
 abort:
+	r.appLog.Debugf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 	mr.ServerError(err)
 
 rollback:
@@ -367,9 +378,11 @@ func (r *ConfigurationRead) version(q *msg.Request, mr *msg.Result) {
 		optionalValidAt                         pq.NullTime
 		optionalDataID                          sql.NullString
 	)
-
+	Section := "Configuration"
+	Action := "Version"
 	// open transaction
 	if tx, err = r.conn.Begin(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -454,6 +467,7 @@ func (r *ConfigurationRead) version(q *msg.Request, mr *msg.Result) {
 	mr.Configuration = append(mr.Configuration, configuration)
 
 	if err = tx.Commit(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -461,6 +475,7 @@ func (r *ConfigurationRead) version(q *msg.Request, mr *msg.Result) {
 	return
 
 abort:
+	r.appLog.Debugf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 	mr.ServerError(err)
 
 rollback:

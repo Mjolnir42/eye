@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/go-redis/redis"
 	"github.com/go-resty/resty"
 	"github.com/mjolnir42/erebos"
@@ -78,10 +77,25 @@ func NewLookup(conf *erebos.Config, appName string) *Lookup {
 	if l.Config.Eyewall.ApplicationName != `` {
 		l.name = l.Config.Eyewall.ApplicationName
 	}
+	if l.Config.Eyewall.ConnectionPool == 0 {
+		l.Config.Eyewall.ConnectionPool = 500
+	}
+	if l.Config.Redis.PoolSize == 0 {
+		l.Config.Redis.PoolSize = 20
+	}
+	if l.Config.Redis.MinIdleConns == 0 {
+		l.Config.Redis.PoolSize = 10
+	}
+	transport := &http.Transport{
+		IdleConnTimeout:     90 * time.Second,
+		MaxIdleConnsPerHost: l.Config.Eyewall.ConnectionPool,
+		MaxIdleConns:        l.Config.Eyewall.ConnectionPool,
+	}
 	l.client = resty.New().
 		SetHeader(`Content-Type`, `application/json`).
 		SetContentLength(true).
 		SetDisableWarn(true).
+		SetTransport(transport).
 		SetRedirectPolicy(resty.NoRedirectPolicy()).
 		SetRetryCount(0).
 		OnBeforeRequest(func(cl *resty.Client, rq *resty.Request) error {
@@ -105,20 +119,19 @@ func NewLookup(conf *erebos.Config, appName string) *Lookup {
 
 // Start sets up Lookup and connects to Redis
 func (l *Lookup) Start() error {
-	fmt.Println("pre taste")
 	l.Taste()
-	fmt.Println("post taste")
 	if l.Config.Eyewall.NoLocalRedis {
 		return nil
 	}
-
 	l.cacheTimeout = time.Duration(
 		l.Config.Redis.CacheTimeout,
 	) * time.Second
 	l.redis = redis.NewClient(&redis.Options{
-		Addr:     l.Config.Redis.Connect,
-		Password: l.Config.Redis.Password,
-		DB:       l.Config.Redis.DB,
+		Addr:         l.Config.Redis.Connect,
+		Password:     l.Config.Redis.Password,
+		DB:           l.Config.Redis.DB,
+		PoolSize:     20,
+		MinIdleConns: 10,
 	})
 	if _, err := l.redis.Ping().Result(); err != nil {
 		return err
@@ -410,7 +423,6 @@ func (l *Lookup) processRequest(lookID string) (map[string]Threshold, error) {
 		}
 
 		// process result from eye and store in redis
-		spew.Dump(res)
 		thr, err = l.v2Process(lookID, res)
 		if err == ErrUnconfigured {
 			return nil, ErrUnconfigured

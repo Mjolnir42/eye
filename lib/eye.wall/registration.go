@@ -9,7 +9,6 @@
 package wall // import "github.com/solnx/eye/lib/eye.wall"
 
 import proto "github.com/solnx/eye/lib/eye.proto"
-import "fmt"
 
 // Register adds this eyewall cache to the list of active caches that
 // must be invalidated by Eye

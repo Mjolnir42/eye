@@ -77,6 +77,7 @@ func NewLookup(conf *erebos.Config, appName string) *Lookup {
 	if l.Config.Eyewall.ApplicationName != `` {
 		l.name = l.Config.Eyewall.ApplicationName
 	}
+	// set defaults for the connections pools if nothing else is specified
 	if l.Config.Eyewall.ConnectionPool == 0 {
 		l.Config.Eyewall.ConnectionPool = 500
 	}
@@ -120,9 +121,12 @@ func NewLookup(conf *erebos.Config, appName string) *Lookup {
 // Start sets up Lookup and connects to Redis
 func (l *Lookup) Start() error {
 	l.Taste()
+
 	if l.Config.Eyewall.NoLocalRedis {
+		l.log.Debugf("Started new eyewall instance ConnectionPool=%d Redis=Disabled", l.Config.Eyewall.ConnectionPool)
 		return nil
 	}
+	l.log.Debugf("Started new eyewall instance ConnectionPool=%d RedisPool=%d", l.Config.Eyewall.ConnectionPool, l.Config.Redis.PoolSize)
 	l.cacheTimeout = time.Duration(
 		l.Config.Redis.CacheTimeout,
 	) * time.Second
@@ -139,7 +143,6 @@ func (l *Lookup) Start() error {
 	if err := l.resetReceived(); err != nil {
 		return err
 	}
-	fmt.Println("pre register")
 	return l.Register()
 }
 
@@ -171,7 +174,6 @@ func (l *Lookup) taste(quick bool) {
 		retryCount = 2
 		timeoutMS = 250
 	}
-	fmt.Println("Enter versionloop")
 versionloop:
 	// protocol version array is preference sorted, first hit wins
 	for _, apiVersion := range []int{proto.ProtocolTwo, proto.ProtocolOne} {
@@ -183,9 +185,7 @@ versionloop:
 		if err != nil {
 			l.log.Fatalf("eyewall/cache: malformed eye URL: %s", err.Error())
 		}
-		fmt.Println("Pre foldSlashes")
 		foldSlashes(eyeURL)
-		fmt.Println(eyeURL.String())
 		resp, err := resty.New().
 			// set generic client options
 			SetHeader(`Content-Type`, `application/json`).

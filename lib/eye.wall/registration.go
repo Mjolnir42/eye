@@ -21,10 +21,8 @@ func (l *Lookup) Register() error {
 
 	switch l.apiVersion {
 	case proto.ProtocolTwo:
-		fmt.Println("v2Register")
 		return l.v2Register()
 	}
-	fmt.Println("ErrProtocol")
 	return ErrProtocol
 }
 

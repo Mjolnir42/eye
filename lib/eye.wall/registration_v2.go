@@ -47,12 +47,10 @@ func (l *Lookup) v2Register() error {
 		Post(
 			l.eyeRegAddURL,
 		); err != nil {
-		fmt.Println("Error from eye:", err.Error())
 		return fmt.Errorf("eyewall.v2Register: %s", err.Error())
 	}
 
 	if r, err = v2Result(resp.Body()); err != nil {
-		fmt.Println("Error from v2Result:", err.Error())
 		return fmt.Errorf("eyewall.v2Register: %s", err.Error())
 	}
 

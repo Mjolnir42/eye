@@ -41,7 +41,7 @@ func (l *Lookup) v1LookupEye(lookID string) (*v1.ConfigurationData, error) {
 	} else if resp.StatusCode == 400 {
 		return nil, fmt.Errorf(`Lookup: malformed LookupID`)
 	} else if resp.StatusCode == 404 {
-		l.setUnconfigured(lookID)
+		go l.setUnconfigured(lookID)
 		return nil, ErrUnconfigured
 	} else if resp.StatusCode >= 500 {
 		return nil, fmt.Errorf(
@@ -71,7 +71,7 @@ func (l *Lookup) v1Process(lookID string, t *v1.ConfigurationData) (map[string]T
 		return nil, fmt.Errorf(`lookup.process received t.Configurations == nil`)
 	}
 	if len(t.Configurations) == 0 {
-		l.setUnconfigured(lookID)
+		go l.setUnconfigured(lookID)
 		return nil, ErrUnconfigured
 	}
 	res := make(map[string]Threshold)
@@ -93,7 +93,7 @@ func (l *Lookup) v1Process(lookID string, t *v1.ConfigurationData) (map[string]T
 			t.Predicate = tl.Predicate
 			t.Thresholds[lvl] = tl.Value
 		}
-		l.storeThreshold(lookID, &t)
+		go l.storeThreshold(lookID, &t)
 		res[t.ID] = t
 	}
 	return res, nil

@@ -44,7 +44,7 @@ func (l *Lookup) v2LookupEye(lookID string) (*v2.Result, error) {
 		return result, nil
 	case ErrUnconfigured:
 		// no profiles for lookID
-		l.setUnconfigured(lookID)
+		go l.setUnconfigured(lookID)
 		return nil, ErrUnconfigured
 	default:
 		return nil, fmt.Errorf("eyewall.Lookup: %s", err.Error())
@@ -58,7 +58,7 @@ func (l *Lookup) v2Process(lookID string, pr *v2.Result) (map[string]Threshold, 
 		return nil, fmt.Errorf(`eyewall.Lookup: v2Process received pr.Configurations == nil`)
 	}
 	if len(*pr.Configurations) == 0 {
-		l.setUnconfigured(lookID)
+		go l.setUnconfigured(lookID)
 		return nil, ErrUnconfigured
 	}
 
@@ -84,7 +84,7 @@ func (l *Lookup) v2Process(lookID string, pr *v2.Result) (map[string]Threshold, 
 			t.Thresholds[lvl] = tl.Value
 		}
 
-		l.storeThreshold(lookID, &t)
+		go l.storeThreshold(lookID, &t)
 		res[t.ID] = t
 	}
 	return res, nil

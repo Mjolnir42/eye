@@ -51,6 +51,7 @@ type Lookup struct {
 	limit        *limit.Limit
 	log          *logrus.Logger
 	redis        *redis.Client
+	pipe         redis.Pipeliner
 	cacheTimeout time.Duration
 	apiVersion   int
 	eyeLookupURL string
@@ -134,9 +135,10 @@ func (l *Lookup) Start() error {
 		Addr:         l.Config.Redis.Connect,
 		Password:     l.Config.Redis.Password,
 		DB:           l.Config.Redis.DB,
-		PoolSize:     20,
+		PoolSize:     500,
 		MinIdleConns: 10,
 	})
+	l.pipe = l.redis.Pipeline()
 	if _, err := l.redis.Ping().Result(); err != nil {
 		return err
 	}
@@ -444,13 +446,18 @@ func (l *Lookup) lookupRedis(lookID string) (map[string]Threshold, error) {
 	}
 
 	res := make(map[string]Threshold)
-	data, err := l.redis.HGetAll(lookID).Result()
+
+	getall := l.pipe.HGetAll(lookID)
+	_, err := l.pipe.Exec()
 	if err != nil {
 		return nil, err
 	}
+	data := getall.Val()
 	if len(data) == 0 {
 		return nil, ErrNotFound
 	}
+	getMap := make(map[string]*redis.StringCmd)
+
 dataloop:
 	for key := range data {
 		if key == `unconfigured` {
@@ -459,18 +466,21 @@ dataloop:
 			}
 			continue dataloop
 		}
-		val, err := l.redis.Get(key).Result()
-		if err != nil {
-			return nil, err
-		}
-
+		getMap[key] = l.pipe.Get(key)
+	}
+	_, err = l.pipe.Exec()
+	if err != nil {
+		return nil, err
+	}
+	for key := range getMap {
 		t := Threshold{}
-		err = json.Unmarshal([]byte(val), &t)
+		err = json.Unmarshal([]byte(getMap[key].Val()), &t)
 		if err != nil {
 			return nil, err
 		}
 		res[t.ID] = t
 	}
+
 	return res, nil
 }
 
@@ -479,26 +489,22 @@ func (l *Lookup) setUnconfigured(lookID string) {
 	if l.Config.Eyewall.NoLocalRedis {
 		return
 	}
-
-	if _, err := l.redis.HSet(
+	l.pipe.HSet(
 		lookID,
 		`unconfigured`,
 		time.Now().UTC().Format(time.RFC3339),
-	).Result(); err != nil {
-		if l.log != nil {
-			l.log.Errorf("eyewall/cache: %s", err.Error())
-		}
-		return
-	}
+	)
 
-	if _, err := l.redis.Expire(
+	l.pipe.Expire(
 		lookID,
 		l.cacheTimeout,
-	).Result(); err != nil {
-		if l.log != nil {
-			l.log.Errorf("eyewall/cache: %s", err.Error())
-		}
-	}
+	)
+	//	_, err := pipe.Exec()
+	//	if err != nil {
+	//		if l.log != nil {
+	//			l.log.Errorf("eyewall/cache: %s", err.Error())
+	//		}
+	//	}
 }
 
 // storeThreshold writes t into the local cache
@@ -515,36 +521,28 @@ func (l *Lookup) storeThreshold(lookID string, t *Threshold) {
 		return
 	}
 
-	if _, err := l.redis.Set(
+	l.pipe.Set(
 		t.ID,
 		string(buf),
 		l.cacheTimeout,
-	).Result(); err != nil {
-		if l.log != nil {
-			l.log.Errorf("eyewall/cache: %s", err.Error())
-		}
-		return
-	}
+	)
 
-	if _, err := l.redis.HSet(
+	l.pipe.HSet(
 		lookID,
 		t.ID,
 		time.Now().UTC().Format(time.RFC3339),
-	).Result(); err != nil {
-		if l.log != nil {
-			l.log.Errorf("eyewall/cache: %s", err.Error())
-		}
-		return
-	}
+	)
 
-	if _, err := l.redis.Expire(
+	l.pipe.Expire(
 		lookID,
 		l.cacheTimeout,
-	).Result(); err != nil {
-		if l.log != nil {
-			l.log.Errorf("eyewall/cache: %s", err.Error())
-		}
-	}
+	)
+	//	_, err = pipe.Exec()
+	//	if err != nil {
+	//		if l.log != nil {
+	//			l.log.Errorf("eyewall/cache: %s", err.Error())
+	//		}
+	//	}
 }
 
 // APIVersion returns the Eye API version discovered via taste testing

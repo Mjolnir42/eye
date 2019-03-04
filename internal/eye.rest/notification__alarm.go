@@ -75,9 +75,9 @@ configurationloop:
 			}
 			switch res.StatusCode() {
 			case http.StatusOK:
-				x.appLog.Debugln(`Alarm clearing for RequestID: %s DeploymentID: %s Status: %s`, mr.ID.String(), mr.Configuration[idx].ID, res.Status())
+				x.appLog.Debugf(`Alarm clearing for RequestID: %s DeploymentID: %s Status: %s`, mr.ID.String(), mr.Configuration[idx].ID, res.Status())
 			default:
-				x.appLog.Errorln(`Invalid status on alarm clearing for RequestID: %s DeploymentID: %s Status: %s`, mr.ID.String(), mr.Configuration[idx].ID, res.Status())
+				x.appLog.Errorf(`Invalid status on alarm clearing for RequestID: %s DeploymentID: %s Status: %s`, mr.ID.String(), mr.Configuration[idx].ID, res.Status())
 			}
 		}(body.Bytes(), x.conf.Eye.AlarmEndpoint, r, i)
 	}

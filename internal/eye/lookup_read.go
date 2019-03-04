@@ -56,6 +56,7 @@ func (r *LookupRead) process(q *msg.Request) {
 	default:
 		result.UnknownRequest(q)
 	}
+
 	q.Reply <- result
 }
 
@@ -145,6 +146,7 @@ func (r *LookupRead) configuration(q *msg.Request, mr *msg.Result) {
 		))
 		return
 	}
+
 	mr.OK()
 }
 

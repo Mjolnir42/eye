@@ -10,6 +10,7 @@ package wall // import "github.com/solnx/eye/lib/eye.wall"
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 
 	"github.com/go-redis/redis"
@@ -35,7 +36,9 @@ func NewInvalidation(conf *erebos.Config) (iv *Invalidation) {
 func (iv *Invalidation) Register(regID, addr string, port, db int64) (err error) {
 	iv.Lock()
 	defer iv.Unlock()
-
+	if _, ok := iv.Registry[regID]; ok {
+		return
+	}
 	cl := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", addr, port),
 		Password: iv.Config.Redis.Password,
@@ -45,6 +48,40 @@ func (iv *Invalidation) Register(regID, addr string, port, db int64) (err error)
 		return
 	}
 	iv.Registry[regID] = cl
+	return
+}
+
+func (iv *Invalidation) UpdateAll(reds map[string][3]string) (err error) {
+	iv.Lock()
+	defer iv.Unlock()
+	// Add potential new redis hosts to registry
+	for key := range reds {
+		//Check if the redis client does already exist
+		if _, ok := iv.Registry[key]; ok {
+			continue
+		}
+		db, err := strconv.Atoi(reds[key][2])
+		if err != nil {
+			return err
+		}
+		cl := redis.NewClient(&redis.Options{
+			Addr:     fmt.Sprintf("%s:%s", reds[key][0], reds[key][1]),
+			Password: iv.Config.Redis.Password,
+			DB:       int(db),
+		})
+		if _, err = cl.Ping().Result(); err != nil {
+			return err
+		}
+		iv.Registry[key] = cl
+	}
+	// Remove unused clients from registry
+	for key := range iv.Registry {
+		//Close and remove client from registry if it does not exist in the new client map
+		if _, ok := reds[key]; !ok {
+			iv.Registry[key].Close()
+			delete(iv.Registry, key)
+		}
+	}
 	return
 }
 

@@ -10,6 +10,7 @@
 package rest // import "github.com/solnx/eye/internal/eye.rest"
 
 import (
+	"database/sql"
 	"net/http"
 	"net/url"
 	"text/template"
@@ -20,6 +21,7 @@ import (
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/solnx/eye/internal/eye"
 	msg "github.com/solnx/eye/internal/eye.msg"
+	stmt "github.com/solnx/eye/internal/eye.stmt"
 	wall "github.com/solnx/eye/lib/eye.wall"
 )
 
@@ -35,6 +37,9 @@ type Rest struct {
 	handlerMap   *eye.HandlerMap
 	conf         *erebos.Config
 	restricted   bool
+
+	conn               *sql.DB
+	stmtRegisterGetAll *sql.Stmt
 	// concurrenyLimit caps the number of active outgoing HTTP requests
 	limit *limit.Limit
 	// notification template
@@ -49,6 +54,7 @@ func New(
 	authorizationFunction func(*msg.Request) bool,
 	appHandlerMap *eye.HandlerMap,
 	conf *erebos.Config,
+	conn *sql.DB,
 	appLog *logrus.Logger,
 ) *Rest {
 	x := Rest{}
@@ -60,6 +66,16 @@ func New(
 	x.tmpl = template.Must(template.ParseFiles(conf.Eye.AlarmTemplateFile))
 	x.invl = wall.NewInvalidation(conf)
 	x.appLog = appLog
+	x.conn = conn
+	var err error
+	for statement, prepStmt := range map[string]**sql.Stmt{
+		stmt.RegistryGetAll: &x.stmtRegisterGetAll,
+	} {
+		if *prepStmt, err = x.conn.Prepare(statement); err != nil {
+			x.appLog.Fatal(`lookup`, err, stmt.Name(statement))
+		}
+		defer (*prepStmt).Close()
+	}
 	return &x
 }
 

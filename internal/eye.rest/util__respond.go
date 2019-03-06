@@ -171,8 +171,8 @@ func (x *Rest) respondV2(w *http.ResponseWriter, r *msg.Result) {
 		protoRes = v2.NewRegistrationResult()
 
 		// update cache registry
-		x.eyewallCacheUnregister(r)
-		x.eyewallCacheRegister(r)
+		//x.eyewallCacheUnregister(r)
+		//x.eyewallCacheRegister(r)
 	}
 	// record what was performed
 	protoRes.Section = r.Section

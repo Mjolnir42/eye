@@ -10,6 +10,7 @@
 package main // import "github.com/solnx/eye/cmd/eye"
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -129,7 +130,10 @@ func daemon() int {
 	app.Start()
 
 	// start REST API
-	rst := rest.New(mock.AlwaysAuthorize, &hm, run.conf, run.appLog)
+	rst := rest.New(mock.AlwaysAuthorize, &hm, run.conf, run.conn, run.appLog)
+	if rst == nil {
+		run.appLog.Fatal(fmt.Errorf("could not initialize rest endpoints"))
+	}
 	go rst.Run()
 
 	sigChanKill := make(chan os.Signal, 1)

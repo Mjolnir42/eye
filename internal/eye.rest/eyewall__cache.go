@@ -9,6 +9,8 @@
 package rest // import "github.com/solnx/eye/internal/eye.rest"
 
 import (
+	"database/sql"
+
 	msg "github.com/solnx/eye/internal/eye.msg"
 )
 
@@ -62,6 +64,37 @@ func (x *Rest) eyewallCacheUnregister(r *msg.Result) {
 	x.invl.Unregister(reg.ID)
 }
 
+func (x *Rest) UpdateRegister() error {
+	var (
+		rows                                    *sql.Rows
+		err                                     error
+		registrationID, address, port, database string
+	)
+	// perform search
+	if rows, err = x.stmtRegisterGetAll.Query(); err != nil {
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", "Invalidation/Rest", "UpdateRegister", err.Error())
+		return err
+	}
+	tmpMap := make(map[string][3]string)
+	// iterate over result list
+	for rows.Next() {
+		if err = rows.Scan(
+			&registrationID,
+			&address,
+			&port,
+			&database,
+		); err != nil {
+			rows.Close()
+			x.appLog.Errorf("Section=%s Action=%s Error=%s", "Invalidation/Rest", "UpdateRegister", err.Error())
+			return err
+		}
+		// build result list
+
+		tmpMap[registrationID] = [3]string{address, port, database}
+	}
+	return x.invl.UpdateAll(tmpMap)
+}
+
 // eyewallCacheInvalidate triggers cache invalidation for results that
 // support it
 func (x *Rest) eyewallCacheInvalidate(r *msg.Result) {
@@ -85,6 +118,8 @@ func (x *Rest) eyewallCacheInvalidate(r *msg.Result) {
 	default:
 		return
 	}
+	//Update Register of redis servers from database
+	x.UpdateRegister()
 
 	if !r.Flags.AlarmClearing {
 		// asynchronous active cache invalidation, since no

@@ -27,6 +27,7 @@ type RegistrationWrite struct {
 	stmtRemove *sql.Stmt
 	stmtShow   *sql.Stmt
 	stmtUpdate *sql.Stmt
+	stmtSearch *sql.Stmt
 	appLog     *logrus.Logger
 }
 
@@ -58,10 +59,17 @@ func (w *RegistrationWrite) process(q *msg.Request) {
 
 // add inserts a registration into the database
 func (w *RegistrationWrite) add(q *msg.Request, mr *msg.Result) {
-	var res sql.Result
-	var err error
 	Section := "Registration"
 	Action := "Add"
+	var (
+		rows                                 *sql.Rows
+		res                                  sql.Result
+		registrationID, application, address string
+		port, database                       int64
+		registeredAt                         time.Time
+		err                                  error
+	)
+
 	// generate RegistrationID
 	if q.Registration.ID, err = func() (string, error) {
 		u, e := uuid.NewV4()
@@ -74,7 +82,36 @@ func (w *RegistrationWrite) add(q *msg.Request, mr *msg.Result) {
 		mr.ServerError(err)
 		return
 	}
-
+	// Search leftovers and perform a cleanup
+	if rows, err = w.stmtSearch.Query(
+		q.Registration.Application,
+		q.Registration.Address,
+		q.Registration.Port,
+		q.Registration.Database,
+	); err == nil {
+		for rows.Next() {
+			if err = rows.Scan(
+				&registrationID,
+				&application,
+				&address,
+				&port,
+				&database,
+				&registeredAt,
+			); err != nil {
+				rows.Close()
+				w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
+				mr.ServerError(err)
+				return
+			}
+			if res, err = w.stmtRemove.Exec(
+				registrationID,
+			); err != nil {
+				w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
+				mr.ServerError(err)
+				return
+			}
+		}
+	}
 	// insert registration into the database
 	if res, err = w.stmtAdd.Exec(
 		q.Registration.ID,
@@ -124,6 +161,7 @@ func (w *RegistrationWrite) remove(q *msg.Request, mr *msg.Result) {
 		&database,
 		&registeredAt,
 	); err == sql.ErrNoRows {
+		w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.NotFound(err)
 		tx.Rollback()
 		return
@@ -135,6 +173,7 @@ func (w *RegistrationWrite) remove(q *msg.Request, mr *msg.Result) {
 	}
 
 	if q.Registration.ID != registrationID {
+		w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, "Registration ID's do not match")
 		mr.ServerError(nil)
 		tx.Rollback()
 		return
@@ -144,7 +183,7 @@ func (w *RegistrationWrite) remove(q *msg.Request, mr *msg.Result) {
 	q.Registration.Port = port
 	q.Registration.Database = database
 	q.Registration.RegisteredAt = registeredAt
-
+	w.appLog.Debugf("Section=%s Action=%s Error=%s%s", Section, Action, "Delete registration with id ", q.Registration.ID)
 	// delete registration
 	if res, err = tx.Stmt(w.stmtRemove).Exec(
 		q.Registration.ID,
@@ -165,6 +204,7 @@ func (w *RegistrationWrite) remove(q *msg.Request, mr *msg.Result) {
 		mr.Registration = append(mr.Registration, q.Registration)
 		return
 	}
+	w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 	tx.Rollback()
 }
 

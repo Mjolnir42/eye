@@ -34,6 +34,7 @@ func (w *RegistrationWrite) Run() {
 		stmt.RegistryDel:    &w.stmtRemove,
 		stmt.RegistryShow:   &w.stmtShow,
 		stmt.RegistryUpdate: &w.stmtUpdate,
+		stmt.RegistrySearch: &w.stmtSearch,
 	} {
 		if *prepStmt, err = w.conn.Prepare(statement); err != nil {
 			w.appLog.Fatal(`RegistrationWrite`, err, stmt.Name(statement))

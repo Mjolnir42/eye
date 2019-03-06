@@ -153,7 +153,6 @@ func (l *Lookup) Close() {
 	if l.Config.Eyewall.NoLocalRedis {
 		return
 	}
-
 	l.redis.Close()
 	l.Unregister()
 }

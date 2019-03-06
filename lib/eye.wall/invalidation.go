@@ -51,8 +51,10 @@ func (iv *Invalidation) Register(regID, addr string, port, db int64) (err error)
 // Unregister deletes a cache from the registry
 func (iv *Invalidation) Unregister(regID string) {
 	iv.Lock()
-	iv.Registry[regID].Close()
-	delete(iv.Registry, regID)
+	if _, ok := iv.Registry[regID]; ok {
+		iv.Registry[regID].Close()
+		delete(iv.Registry, regID)
+	}
 	iv.Unlock()
 }
 
@@ -118,6 +120,7 @@ func (iv *Invalidation) invalidateCache(cacheID, lookupID string) error {
 	// declare here to enable recursive definition
 	var clear func(string, string) error
 
+	//not sure if this is how pipelining works.. missing pipe.Exec() ?
 	clear = func(cache, key string) error {
 		err := iv.Registry[cache].Watch(
 			func(tx *redis.Tx) error {

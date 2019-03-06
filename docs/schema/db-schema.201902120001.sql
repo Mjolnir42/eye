@@ -86,7 +86,8 @@ CREATE TABLE IF NOT EXISTS eye.registry (
   port                    numeric(5,0)    NOT NULL CONSTRAINT valid_port CHECK ( port > 0 AND port < 65536 ),
   database                numeric(5,0)    NOT NULL CONSTRAINT valid_db CHECK ( database >= 0 ),
   registeredAt            timestamptz(3)  NOT NULL DEFAULT NOW(),
-  CONSTRAINT registeredAt_utc CHECK( EXTRACT( TIMEZONE FROM registeredAt ) = '0' )
+  CONSTRAINT registeredAt_utc CHECK( EXTRACT( TIMEZONE FROM registeredAt ) = '0' ),
+  UNIQUE( application, address, port, database )
 );
 --
 -- provisioning records when a profile is rolled out

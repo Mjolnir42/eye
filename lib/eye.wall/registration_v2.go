@@ -69,7 +69,6 @@ func (l *Lookup) v2Unregister() error {
 
 	var err error
 	var resp *resty.Response
-
 	if resp, err = l.client.R().
 		SetPathParams(map[string]string{
 			`registrationID`: l.registration,

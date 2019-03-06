@@ -73,11 +73,11 @@ func daemon() int {
 	if err = run.conf.FromFile(configurationFile); err != nil {
 		logrus.Fatal(err)
 	}
-	panic_log, err := os.OpenFile(filepath.Join(run.conf.Log.Path, `panic.log`), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
+	panicLog, err := os.OpenFile(filepath.Join(run.conf.Log.Path, `panic.log`), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	redirectStderr(panic_log)
+	redirectStderr(panicLog)
 
 	// open application logfile
 	run.appLog = logrus.New()

@@ -29,7 +29,7 @@ func (x *Rest) RegistrationShow(w http.ResponseWriter, r *http.Request,
 	request.Section = msg.SectionRegistration
 	request.Action = msg.ActionShow
 	request.Registration.ID = strings.ToLower(params.ByName(`ID`))
-
+	x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, "Action startet")
 	if !x.isAuthorized(&request) {
 		x.replyForbidden(&w, &request, nil)
 		return
@@ -54,7 +54,7 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request, params h
 	request := msg.New(r, params)
 	request.Section = msg.SectionRegistration
 	request.Action = msg.ActionList
-
+	x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, "Action startet")
 	// parse URL query parameters to differentiate between ActionList
 	// and ActionSearch. Any number of parameters can be specified at
 	// the same time
@@ -133,7 +133,7 @@ func (x *Rest) RegistrationAdd(w http.ResponseWriter, r *http.Request,
 	request := msg.New(r, params)
 	request.Section = msg.SectionRegistration
 	request.Action = msg.ActionAdd
-
+	x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, "Action startet")
 	cReq := v2.NewRegistrationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
 		x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
@@ -160,7 +160,7 @@ func (x *Rest) RegistrationUpdate(w http.ResponseWriter, r *http.Request,
 	request := msg.New(r, params)
 	request.Section = msg.SectionRegistration
 	request.Action = msg.ActionUpdate
-
+	x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, "Action startet")
 	cReq := v2.NewRegistrationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
 		x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
@@ -203,14 +203,7 @@ func (x *Rest) RegistrationRemove(w http.ResponseWriter, r *http.Request,
 	request.Section = msg.SectionRegistration
 	request.Action = msg.ActionRemove
 	request.Registration.ID = params.ByName(`ID`)
-
-	// request body may contain request flag overrides
-	cReq := v2.NewRegistrationRequest()
-	if err := decodeJSONBody(r, &cReq); err != nil {
-		x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
-		x.replyBadRequest(&w, &request, err)
-		return
-	}
+	x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, "Action startet")
 
 	if !x.isAuthorized(&request) {
 		x.replyForbidden(&w, &request, nil)

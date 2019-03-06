@@ -29,7 +29,7 @@ func (run *runtime) connectDatabase() {
 
 	driver := `postgres`
 
-	run.appLog.Printf("Using postgreSQL: dbname='%s' user='%s' host='%s' port='%s' sslmode='%s' connect_timeout='%s'",
+	run.appLog.Printf("Using postgreSQL: dbname='%s' user='%s' host='%s' port='%s' sslmode='%s' connect_timeout='%s' options='-c timezone=UTC'",
 		run.conf.PostgreSQL.Name,
 		run.conf.PostgreSQL.User,
 		run.conf.PostgreSQL.Host,
@@ -37,7 +37,7 @@ func (run *runtime) connectDatabase() {
 		run.conf.PostgreSQL.TLSMode,
 		run.conf.PostgreSQL.Timeout,
 	)
-	connect := fmt.Sprintf("dbname='%s' user='%s' password='%s' host='%s' port='%s' sslmode='%s' connect_timeout='%s'",
+	connect := fmt.Sprintf("dbname='%s' user='%s' password='%s' host='%s' port='%s' sslmode='%s' connect_timeout='%s' options='-c timezone=UTC'",
 		run.conf.PostgreSQL.Name,
 		run.conf.PostgreSQL.User,
 		run.conf.PostgreSQL.Pass,

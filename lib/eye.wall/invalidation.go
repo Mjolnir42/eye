@@ -128,7 +128,8 @@ func (iv *Invalidation) AsyncInvalidate(lookupID string) {
 // Both channels must be read.
 func (iv *Invalidation) Invalidate(lookupID string) (done chan struct{}, errors chan error) {
 	iv.RLock()
-
+	done = make(chan struct{})
+	errors = make(chan error)
 	go func(done chan struct{}, errors chan error) {
 		defer iv.RUnlock()
 		wg := sync.WaitGroup{}
@@ -144,7 +145,6 @@ func (iv *Invalidation) Invalidate(lookupID string) (done chan struct{}, errors 
 		wg.Wait()
 		close(done)
 	}(done, errors)
-
 	return
 }
 

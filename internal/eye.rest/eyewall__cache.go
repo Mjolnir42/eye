@@ -64,7 +64,7 @@ func (x *Rest) eyewallCacheUnregister(r *msg.Result) {
 	x.invl.Unregister(reg.ID)
 }
 
-func (x *Rest) UpdateRegister() error {
+func (x *Rest) updateRegister() error {
 	var (
 		rows                                    *sql.Rows
 		err                                     error
@@ -119,7 +119,7 @@ func (x *Rest) eyewallCacheInvalidate(r *msg.Result) {
 		return
 	}
 	//Update Register of redis servers from database
-	x.UpdateRegister()
+	x.updateRegister()
 
 	if !r.Flags.AlarmClearing {
 		// asynchronous active cache invalidation, since no

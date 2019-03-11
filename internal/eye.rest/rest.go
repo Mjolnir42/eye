@@ -67,6 +67,14 @@ func New(
 	x.invl = wall.NewInvalidation(conf)
 	x.appLog = appLog
 	x.conn = conn
+
+	return &x
+}
+
+// Run is the event server for Rest
+func (x *Rest) Run() {
+	router := x.setupRouter()
+	//setup sql statement
 	var err error
 	for statement, prepStmt := range map[string]**sql.Stmt{
 		stmt.RegistryGetAll: &x.stmtRegisterGetAll,
@@ -76,12 +84,6 @@ func New(
 		}
 		defer (*prepStmt).Close()
 	}
-	return &x
-}
-
-// Run is the event server for Rest
-func (x *Rest) Run() {
-	router := x.setupRouter()
 	x.conf.Eye.Daemon.URL = &url.URL{}
 	x.conf.Eye.Daemon.URL.Host = x.conf.Eye.Daemon.Listen + ":" + x.conf.Eye.Daemon.Port
 	// TODO switch to new abortable interface

@@ -100,7 +100,7 @@ func (x *Rest) updateRegister() error {
 // eyewallCacheInvalidate triggers cache invalidation for results that
 // support it
 func (x *Rest) eyewallCacheInvalidate(r *msg.Result) {
-	if !r.Flags.CacheInvalidation {
+	if !r.Flags.CacheInvalidation || len(r.Configuration) == 0 {
 		return
 	}
 

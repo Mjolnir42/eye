@@ -223,17 +223,16 @@ func (x *Rest) respondV2(w *http.ResponseWriter, r *msg.Result) {
 		r.Flags.AlarmClearing = false
 	}
 
-	// send deployment feedback to SOMA
-	if r.Flags.SendDeploymentFeedback {
-		go x.somaStatusUpdate(r)
-	}
-
 	// perform cache invalidation
 	x.eyewallCacheInvalidate(r)
 
 	// send notification alarm event
 	if r.Flags.AlarmClearing {
 		go x.alarmSend(r)
+	}
+	// send deployment feedback to SOMA
+	if r.Flags.SendDeploymentFeedback {
+		go x.somaStatusUpdate(r)
 	}
 
 	if bjson, err = json.Marshal(&protoRes); err != nil {

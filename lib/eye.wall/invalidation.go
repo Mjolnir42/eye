@@ -121,7 +121,6 @@ func (iv *Invalidation) AsyncInvalidate(lookupID string) {
 
 		}
 	}()
-	return
 }
 
 // Invalidate removes lookupID from all registered caches. Errors

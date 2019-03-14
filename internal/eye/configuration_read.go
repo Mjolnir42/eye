@@ -54,7 +54,7 @@ func (r *ConfigurationRead) process(q *msg.Request) {
 	case msg.ActionHistory:
 		r.history(q, &result)
 	case msg.ActionList:
-		r.list(q, &result)
+		r.list(&result)
 	case msg.ActionShow:
 		r.show(q, &result)
 	case msg.ActionVersion:
@@ -66,7 +66,7 @@ func (r *ConfigurationRead) process(q *msg.Request) {
 }
 
 // list returns all configurations by ID
-func (r *ConfigurationRead) list(q *msg.Request, mr *msg.Result) {
+func (r *ConfigurationRead) list(mr *msg.Result) {
 	var (
 		configurationID string
 		rows            *sql.Rows
@@ -206,7 +206,6 @@ abort:
 
 rollback:
 	tx.Rollback()
-	return
 }
 
 // history returns the full data history for a configuration
@@ -339,9 +338,7 @@ func (r *ConfigurationRead) history(q *msg.Request, mr *msg.Result) {
 		data.Info.ProvisionedAt = v2.FormatProvision(provisionTS)
 		data.Info.DeprovisionedAt = v2.FormatProvision(deprovisionTS)
 		data.Info.Tasks = make([]string, len(tasks))
-		for i := range tasks {
-			data.Info.Tasks[i] = tasks[i]
-		}
+		copy(data.Info.Tasks, tasks)
 
 		configuration.Data[idx] = data
 	}
@@ -361,7 +358,6 @@ abort:
 
 rollback:
 	tx.Rollback()
-	return
 }
 
 // version returns an arbitrary version of specific configuration
@@ -480,7 +476,6 @@ abort:
 
 rollback:
 	tx.Rollback()
-	return
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

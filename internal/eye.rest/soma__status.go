@@ -71,7 +71,7 @@ func (x *Rest) somaStatusUpdate(r *msg.Result) {
 			cl.SetTimeout(0)
 			return nil
 		})
-
+	x.appLog.Infof("Sending deployment feedback '%s' for '%s' to '%s'", feedback, r.ConfigurationTask, url)
 	res, err := client.R().Patch(url)
 	if err != nil {
 		if len(r.Configuration) >= 1 {
@@ -119,7 +119,6 @@ func (x *Rest) somaSetFeedbackURL(r *msg.Request) {
 	)
 	foldSlashes(soma)
 	r.FeedbackURL = soma.String()
-	return
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

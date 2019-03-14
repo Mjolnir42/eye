@@ -24,8 +24,6 @@ type PermissiveSupervisor struct {
 	Shutdown chan struct{}
 	conn     *sql.DB
 	appLog   *logrus.Logger
-	reqLog   *logrus.Logger
-	errLog   *logrus.Logger
 	auditLog *logrus.Logger
 	conf     *erebos.Config
 }

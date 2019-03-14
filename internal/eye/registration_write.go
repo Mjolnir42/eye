@@ -103,13 +103,14 @@ func (w *RegistrationWrite) add(q *msg.Request, mr *msg.Result) {
 				mr.ServerError(err)
 				return
 			}
-			if res, err = w.stmtRemove.Exec(
+			if _, err = w.stmtRemove.Exec(
 				registrationID,
 			); err != nil {
 				w.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 				mr.ServerError(err)
 				return
 			}
+
 		}
 	}
 	// insert registration into the database

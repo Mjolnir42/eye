@@ -43,7 +43,7 @@ func (r *RegistrationRead) process(q *msg.Request) {
 
 	switch q.Action {
 	case msg.ActionList:
-		r.list(q, &result)
+		r.list(&result)
 	case msg.ActionShow:
 		r.show(q, &result)
 	case msg.ActionSearch, msg.ActionRegistration:
@@ -55,7 +55,7 @@ func (r *RegistrationRead) process(q *msg.Request) {
 }
 
 // list returns all registrations by ID
-func (r *RegistrationRead) list(q *msg.Request, mr *msg.Result) {
+func (r *RegistrationRead) list(mr *msg.Result) {
 	var (
 		registrationID string
 		rows           *sql.Rows

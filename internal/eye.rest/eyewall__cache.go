@@ -36,7 +36,9 @@ func (x *Rest) eyewallCacheRegister(r *msg.Result) {
 	}
 
 	reg := r.Registration[0]
-	x.invl.Register(reg.ID, reg.Address, reg.Port, reg.Database)
+	if err := x.invl.Register(reg.ID, reg.Address, reg.Port, reg.Database); err != nil {
+		x.appLog.Errorf("Could not connect to redis cache %s:%d due to error: %s", reg.Address, reg.Port, err.Error())
+	}
 }
 
 // eyewallCacheUnregister removes a cache from the invalidation registry

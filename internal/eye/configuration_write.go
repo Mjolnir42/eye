@@ -456,7 +456,6 @@ abort:
 
 rollback:
 	tx.Rollback()
-	return
 }
 
 // activate records a configuration activation

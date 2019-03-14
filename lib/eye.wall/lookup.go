@@ -154,7 +154,9 @@ func (l *Lookup) Close() {
 		return
 	}
 	l.redis.Close()
-	l.Unregister()
+	if err := l.Unregister(); err != nil {
+		l.log.Errorf("Error on Lookup Unregister: %s", err.Error())
+	}
 }
 
 // Taste connects to Eye and checks supported API versions

@@ -135,11 +135,12 @@ func (x *Rest) eyewallCacheInvalidate(r *msg.Result) {
 	// clearing has to be blocked until the invalidation has been
 	// performed
 	done, errors := x.invl.Invalidate(r.Configuration[0].LookupID)
+invalidation_loop:
 	for {
 		select {
 		case <-errors:
 		case <-done:
-			break
+			break invalidation_loop
 		}
 	}
 }

@@ -111,12 +111,14 @@ func (iv *Invalidation) CloseAll() {
 func (iv *Invalidation) AsyncInvalidate(lookupID string) {
 	go func() {
 		done, errors := iv.Invalidate(lookupID)
+	invalidation_loop:
 		for {
 			select {
 			case <-errors:
 			case <-done:
-				break
+				break invalidation_loop
 			}
+
 		}
 	}()
 	return

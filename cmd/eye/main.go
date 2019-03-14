@@ -15,6 +15,8 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	rt "runtime"
+	"runtime/pprof"
 	"strings"
 	"syscall"
 
@@ -37,6 +39,9 @@ func init() {
 	log.SetOutput(os.Stderr)
 }
 
+var cpuprofile = goopt.String([]string{`--cpuprofile`}, ``, `write cpu profile to file`)
+var memprofile = goopt.String([]string{`--memprofile`}, ``, `write memory profile to file`)
+
 func main() {
 	os.Exit(daemon())
 }
@@ -57,7 +62,28 @@ func daemon() int {
 
 	cliConfPath := goopt.String([]string{`-c`, `--config`}, `/srv/eye/conf/eye.conf`, `Configuration file`)
 	goopt.Parse(nil)
-
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal("could not create memory profile: ", err)
+		}
+		defer f.Close()
+		rt.GC() // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			log.Fatal("could not write memory profile: ", err)
+		}
+	}
 	run := runtime{}
 	run.logFileMap = &eye.LogHandleMap{}
 	run.logFileMap.Init()
@@ -135,7 +161,6 @@ func daemon() int {
 		run.appLog.Fatal(fmt.Errorf("could not initialize rest endpoints"))
 	}
 	go rst.Run()
-
 	sigChanKill := make(chan os.Signal, 1)
 	signal.Notify(sigChanKill, syscall.SIGTERM, syscall.SIGINT)
 	<-sigChanKill

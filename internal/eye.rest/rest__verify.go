@@ -17,10 +17,14 @@ import (
 // Verify is a wrapper for CheckShutdown and BasicAuth checks
 func (x *Rest) Verify(h httprouter.Handle) httprouter.Handle {
 	return x.CheckShutdown(
-		func(w http.ResponseWriter, r *http.Request,
-			ps httprouter.Params) {
-			h(w, r, ps)
-		},
+		x.EnrichRequest(
+			func(w http.ResponseWriter, r *http.Request,
+				ps httprouter.Params) {
+
+				h(w, r, ps)
+
+			},
+		),
 	)
 }
 

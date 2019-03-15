@@ -258,8 +258,9 @@ func (w *ConfigurationWrite) remove(q *msg.Request, mr *msg.Result) {
 	// to true so that the OK event can be constructed with the correct
 	// metadata
 	if err = w.txCfgLoadActive(tx, q, &configuration); err == sql.ErrNoRows {
-		// there is active configuration that can be loaded for clearing
+		// there is no active configuration that can be loaded for clearing or invalidation
 		mr.Flags.AlarmClearing = false
+		mr.Flags.CacheInvalidation = false
 		// that which does not exist can not be deleted
 		goto commitTx
 	} else if err != nil {
@@ -335,7 +336,6 @@ commitTx:
 abort:
 	w.appLog.Debugf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 	mr.ServerError(err)
-
 rollback:
 	tx.Rollback()
 }

@@ -103,11 +103,9 @@ func (x *Rest) somaSetFeedbackURL(r *msg.Request) {
 
 	path := x.conf.Eye.SomaPrefix
 	feedbackID := r.Configuration.ID
-	x.appLog.Infof("Initially set Path: %s, ID: %s", path, feedbackID)
 	// potentially better data is available from a SOMA deployment
 	// notification
 	if !uuid.Equal(uuid.Nil, r.Notification.ID) {
-		x.appLog.Infoln("Lets use the infos of the deplyment details")
 		path = r.Notification.PathPrefix
 		feedbackID = r.Notification.ID.String()
 	}

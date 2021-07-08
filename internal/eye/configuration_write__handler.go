@@ -23,31 +23,29 @@ import (
 func (w *ConfigurationWrite) Register(c *sql.DB, l ...*logrus.Logger) {
 	w.conn = c
 	w.appLog = l[0]
-	w.reqLog = l[1]
-	w.errLog = l[2]
 }
 
 // Run is the event loop for ConfigurationWrite
 func (w *ConfigurationWrite) Run() {
 	var err error
 
-	for statement, prepStmt := range map[string]*sql.Stmt{
-		stmt.LookupAddID:             w.stmtLookupAddID,
-		stmt.CfgAddID:                w.stmtCfgAddID,
-		stmt.CfgSelectValidForUpdate: w.stmtCfgSelectValidForUpdate,
-		stmt.CfgDataUpdateValidity:   w.stmtCfgDataUpdateValidity,
-		stmt.CfgAddData:              w.stmtCfgAddData,
-		stmt.ProvAdd:                 w.stmtProvAdd,
-		stmt.ActivationGet:           w.stmtActivationGet,
-		stmt.ProvFinalize:            w.stmtProvFinalize,
-		stmt.ActivationDel:           w.stmtActivationDel,
-		stmt.CfgShow:                 w.stmtCfgShow,
-		stmt.ActivationSet:           w.stmtActivationSet,
+	for statement, prepStmt := range map[string]**sql.Stmt{
+		stmt.LookupAddID:             &w.stmtLookupAddID,
+		stmt.CfgAddID:                &w.stmtCfgAddID,
+		stmt.CfgSelectValidForUpdate: &w.stmtCfgSelectValidForUpdate,
+		stmt.CfgDataUpdateValidity:   &w.stmtCfgDataUpdateValidity,
+		stmt.CfgAddData:              &w.stmtCfgAddData,
+		stmt.ProvAdd:                 &w.stmtProvAdd,
+		stmt.ActivationGet:           &w.stmtActivationGet,
+		stmt.ProvFinalize:            &w.stmtProvFinalize,
+		stmt.ActivationDel:           &w.stmtActivationDel,
+		stmt.CfgShow:                 &w.stmtCfgShow,
+		stmt.ActivationSet:           &w.stmtActivationSet,
 	} {
-		if prepStmt, err = w.conn.Prepare(statement); err != nil {
-			w.errLog.Fatal(`lookup`, err, stmt.Name(statement))
+		if *prepStmt, err = w.conn.Prepare(statement); err != nil {
+			w.appLog.Fatal(`lookup`, err, stmt.Name(statement))
 		}
-		defer prepStmt.Close()
+		defer (*prepStmt).Close()
 	}
 
 runloop:

@@ -23,27 +23,25 @@ import (
 func (r *ConfigurationRead) Register(c *sql.DB, l ...*logrus.Logger) {
 	r.conn = c
 	r.appLog = l[0]
-	r.reqLog = l[1]
-	r.errLog = l[2]
 }
 
 // Run is the event loop for ConfigurationRead
 func (r *ConfigurationRead) Run() {
 	var err error
 
-	for statement, prepStmt := range map[string]*sql.Stmt{
-		stmt.CfgSelectValid: r.stmtCfgSelectValid,
-		stmt.CfgShow:        r.stmtCfgShow,
-		stmt.ActivationGet:  r.stmtActivationGet,
-		stmt.CfgList:        r.stmtCfgList,
-		stmt.CfgDataHistory: r.stmtCfgHistory,
-		stmt.ProvForDataID:  r.stmtProvInfo,
-		stmt.CfgVersion:     r.stmtCfgVersion,
+	for statement, prepStmt := range map[string]**sql.Stmt{
+		stmt.CfgSelectValid: &r.stmtCfgSelectValid,
+		stmt.CfgShow:        &r.stmtCfgShow,
+		stmt.ActivationGet:  &r.stmtActivationGet,
+		stmt.CfgList:        &r.stmtCfgList,
+		stmt.CfgDataHistory: &r.stmtCfgHistory,
+		stmt.ProvForDataID:  &r.stmtProvInfo,
+		stmt.CfgVersion:     &r.stmtCfgVersion,
 	} {
-		if prepStmt, err = r.conn.Prepare(statement); err != nil {
-			r.errLog.Fatal(`configuration_r`, err, stmt.Name(statement))
+		if *prepStmt, err = r.conn.Prepare(statement); err != nil {
+			r.appLog.Fatal(`configuration_r`, err, stmt.Name(statement))
 		}
-		defer prepStmt.Close()
+		defer (*prepStmt).Close()
 	}
 
 runloop:

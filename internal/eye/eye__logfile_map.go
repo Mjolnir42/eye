@@ -21,6 +21,11 @@ type LogHandleMap struct {
 	sync.RWMutex
 }
 
+// Initialize the LogHandleMap
+func (l *LogHandleMap) Init() {
+	l.hmap = make(map[string]*reopen.FileWriter)
+}
+
 // Add registers a new filehandle
 func (l *LogHandleMap) Add(key string, fh *reopen.FileWriter) {
 	l.Lock()

@@ -171,8 +171,8 @@ func (x *Rest) respondV2(w *http.ResponseWriter, r *msg.Result) {
 		protoRes = v2.NewRegistrationResult()
 
 		// update cache registry
-		x.eyewallCacheUnregister(r)
-		x.eyewallCacheRegister(r)
+		//x.eyewallCacheUnregister(r)
+		//x.eyewallCacheRegister(r)
 	}
 	// record what was performed
 	protoRes.Section = r.Section
@@ -180,6 +180,7 @@ func (x *Rest) respondV2(w *http.ResponseWriter, r *msg.Result) {
 
 	// internal result contains an error, copy over into protocol result
 	if r.Error != nil {
+		x.appLog.Tracef("Section=%s Action=%s Error=%s", protoRes.Section, protoRes.Action, r.Error.Error())
 		*protoRes.Errors = append(*protoRes.Errors, r.Error.Error())
 	}
 
@@ -216,15 +217,10 @@ func (x *Rest) respondV2(w *http.ResponseWriter, r *msg.Result) {
 	// no cache invalidation for failed requests
 	// no alarm clearing for failed requests
 	case r.Code >= 400:
-		*protoRes.Configurations = nil
-		*protoRes.Registrations = nil
+		protoRes.Configurations = nil
+		protoRes.Registrations = nil
 		r.Flags.CacheInvalidation = false
 		r.Flags.AlarmClearing = false
-	}
-
-	// send deployment feedback to SOMA
-	if r.Flags.SendDeploymentFeedback {
-		go x.somaStatusUpdate(r)
 	}
 
 	// perform cache invalidation
@@ -234,14 +230,18 @@ func (x *Rest) respondV2(w *http.ResponseWriter, r *msg.Result) {
 	if r.Flags.AlarmClearing {
 		go x.alarmSend(r)
 	}
+	// send deployment feedback to SOMA
+	if r.Flags.SendDeploymentFeedback {
+		go x.somaStatusUpdate(r)
+	}
 
 	if bjson, err = json.Marshal(&protoRes); err != nil {
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", "Respond", "V2", err.Error())
 		hardInternalError(w)
 		return
 	}
 
 	sendJSONReply(w, &bjson)
-	return
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

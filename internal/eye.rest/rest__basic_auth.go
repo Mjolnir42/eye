@@ -11,16 +11,35 @@ package rest // import "github.com/solnx/eye/internal/eye.rest"
 import (
 	"bytes"
 	"encoding/base64"
-	"log"
+
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
+	uuid "github.com/satori/go.uuid"
 	"github.com/solnx/eye/internal/eye"
 	msg "github.com/solnx/eye/internal/eye.msg"
-	uuid "github.com/satori/go.uuid"
 )
+
+func (x *Rest) EnrichRequest(h httprouter.Handle) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request,
+		ps httprouter.Params) {
+		// generate and record the requestID
+		requestID := uuid.Must(uuid.NewV4())
+		ps = append(ps, httprouter.Param{
+			Key:   `RequestID`,
+			Value: requestID.String(),
+		})
+		requestTS := time.Now().UTC()
+		ps = append(ps, httprouter.Param{
+			Key:   `RequestTS`,
+			Value: requestTS.Format(time.RFC3339Nano),
+		})
+		h(w, r, ps)
+		return
+	}
+}
 
 // BasicAuth handles HTTP BasicAuth on requests
 func (x *Rest) BasicAuth(h httprouter.Handle) httprouter.Handle {
@@ -91,7 +110,7 @@ func (x *Rest) BasicAuth(h httprouter.Handle) httprouter.Handle {
 
 					result := <-request.Reply
 					if result.Error != nil {
-						log.Println(result.Error.Error()) // XXX
+						x.appLog.Errorln(result.Error.Error()) // XXX
 					}
 
 					if result.Super.Verdict == msg.VerdictOK {

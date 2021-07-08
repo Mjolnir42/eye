@@ -10,6 +10,7 @@ package wall // import "github.com/solnx/eye/lib/eye.wall"
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 
 	"github.com/go-redis/redis"
@@ -25,6 +26,7 @@ type Invalidation struct {
 
 // NewInvalidation returns a new Invalidation
 func NewInvalidation(conf *erebos.Config) (iv *Invalidation) {
+	iv = &Invalidation{}
 	iv.Config = conf
 	iv.Registry = make(map[string]*redis.Client)
 	return
@@ -34,7 +36,9 @@ func NewInvalidation(conf *erebos.Config) (iv *Invalidation) {
 func (iv *Invalidation) Register(regID, addr string, port, db int64) (err error) {
 	iv.Lock()
 	defer iv.Unlock()
-
+	if _, ok := iv.Registry[regID]; ok {
+		return
+	}
 	cl := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", addr, port),
 		Password: iv.Config.Redis.Password,
@@ -47,11 +51,47 @@ func (iv *Invalidation) Register(regID, addr string, port, db int64) (err error)
 	return
 }
 
+func (iv *Invalidation) UpdateAll(reds map[string][3]string) (err error) {
+	iv.Lock()
+	defer iv.Unlock()
+	// Add potential new redis hosts to registry
+	for key := range reds {
+		//Check if the redis client does already exist
+		if _, ok := iv.Registry[key]; ok {
+			continue
+		}
+		db, err := strconv.Atoi(reds[key][2])
+		if err != nil {
+			return err
+		}
+		cl := redis.NewClient(&redis.Options{
+			Addr:     fmt.Sprintf("%s:%s", reds[key][0], reds[key][1]),
+			Password: iv.Config.Redis.Password,
+			DB:       int(db),
+		})
+		if _, err = cl.Ping().Result(); err != nil {
+			return err
+		}
+		iv.Registry[key] = cl
+	}
+	// Remove unused clients from registry
+	for key := range iv.Registry {
+		//Close and remove client from registry if it does not exist in the new client map
+		if _, ok := reds[key]; !ok {
+			iv.Registry[key].Close()
+			delete(iv.Registry, key)
+		}
+	}
+	return
+}
+
 // Unregister deletes a cache from the registry
 func (iv *Invalidation) Unregister(regID string) {
 	iv.Lock()
-	iv.Registry[regID].Close()
-	delete(iv.Registry, regID)
+	if _, ok := iv.Registry[regID]; ok {
+		iv.Registry[regID].Close()
+		delete(iv.Registry, regID)
+	}
 	iv.Unlock()
 }
 
@@ -71,15 +111,16 @@ func (iv *Invalidation) CloseAll() {
 func (iv *Invalidation) AsyncInvalidate(lookupID string) {
 	go func() {
 		done, errors := iv.Invalidate(lookupID)
+	invalidation_loop:
 		for {
 			select {
 			case <-errors:
 			case <-done:
-				break
+				break invalidation_loop
 			}
+
 		}
 	}()
-	return
 }
 
 // Invalidate removes lookupID from all registered caches. Errors
@@ -88,7 +129,8 @@ func (iv *Invalidation) AsyncInvalidate(lookupID string) {
 // Both channels must be read.
 func (iv *Invalidation) Invalidate(lookupID string) (done chan struct{}, errors chan error) {
 	iv.RLock()
-
+	done = make(chan struct{})
+	errors = make(chan error)
 	go func(done chan struct{}, errors chan error) {
 		defer iv.RUnlock()
 		wg := sync.WaitGroup{}
@@ -104,7 +146,6 @@ func (iv *Invalidation) Invalidate(lookupID string) (done chan struct{}, errors 
 		wg.Wait()
 		close(done)
 	}(done, errors)
-
 	return
 }
 
@@ -117,6 +158,7 @@ func (iv *Invalidation) invalidateCache(cacheID, lookupID string) error {
 	// declare here to enable recursive definition
 	var clear func(string, string) error
 
+	//not sure if this is how pipelining works.. missing pipe.Exec() ?
 	clear = func(cache, key string) error {
 		err := iv.Registry[cache].Watch(
 			func(tx *redis.Tx) error {

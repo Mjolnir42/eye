@@ -23,10 +23,10 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/go-resty/resty"
 	"github.com/mjolnir42/erebos"
+	"github.com/mjolnir42/limit"
 	"github.com/solnx/eye/internal/eye.msg"
 	proto "github.com/solnx/eye/lib/eye.proto"
 	"github.com/solnx/eye/lib/eye.proto/v2"
-	"github.com/mjolnir42/limit"
 )
 
 var (
@@ -51,15 +51,16 @@ type Lookup struct {
 	limit        *limit.Limit
 	log          *logrus.Logger
 	redis        *redis.Client
+	pipe         redis.Pipeliner
 	cacheTimeout time.Duration
 	apiVersion   int
-	eyeLookupURL *url.URL
-	eyeActiveURL *url.URL
-	eyeRegAddURL *url.URL
-	eyeRegDelURL *url.URL
-	eyeRegGetURL *url.URL
-	eyeCfgGetURL *url.URL
-	eyeActPndURL *url.URL
+	eyeLookupURL string
+	eyeActiveURL string
+	eyeRegAddURL string
+	eyeRegDelURL string
+	eyeRegGetURL string
+	eyeCfgGetURL string
+	eyeActPndURL string
 	client       *resty.Client
 	name         string
 	registration string
@@ -77,10 +78,26 @@ func NewLookup(conf *erebos.Config, appName string) *Lookup {
 	if l.Config.Eyewall.ApplicationName != `` {
 		l.name = l.Config.Eyewall.ApplicationName
 	}
+	// set defaults for the connections pools if nothing else is specified
+	if l.Config.Eyewall.ConnectionPool == 0 {
+		l.Config.Eyewall.ConnectionPool = 500
+	}
+	if l.Config.Redis.PoolSize == 0 {
+		l.Config.Redis.PoolSize = 20
+	}
+	if l.Config.Redis.MinIdleConns == 0 {
+		l.Config.Redis.PoolSize = 10
+	}
+	transport := &http.Transport{
+		IdleConnTimeout:     90 * time.Second,
+		MaxIdleConnsPerHost: l.Config.Eyewall.ConnectionPool,
+		MaxIdleConns:        l.Config.Eyewall.ConnectionPool,
+	}
 	l.client = resty.New().
 		SetHeader(`Content-Type`, `application/json`).
 		SetContentLength(true).
 		SetDisableWarn(true).
+		SetTransport(transport).
 		SetRedirectPolicy(resty.NoRedirectPolicy()).
 		SetRetryCount(0).
 		OnBeforeRequest(func(cl *resty.Client, rq *resty.Request) error {
@@ -107,17 +124,21 @@ func (l *Lookup) Start() error {
 	l.Taste()
 
 	if l.Config.Eyewall.NoLocalRedis {
+		l.log.Debugf("Started new eyewall instance ConnectionPool=%d Redis=Disabled", l.Config.Eyewall.ConnectionPool)
 		return nil
 	}
-
+	l.log.Debugf("Started new eyewall instance ConnectionPool=%d RedisPool=%d", l.Config.Eyewall.ConnectionPool, l.Config.Redis.PoolSize)
 	l.cacheTimeout = time.Duration(
 		l.Config.Redis.CacheTimeout,
 	) * time.Second
 	l.redis = redis.NewClient(&redis.Options{
-		Addr:     l.Config.Redis.Connect,
-		Password: l.Config.Redis.Password,
-		DB:       l.Config.Redis.DB,
+		Addr:         l.Config.Redis.Connect,
+		Password:     l.Config.Redis.Password,
+		DB:           l.Config.Redis.DB,
+		PoolSize:     500,
+		MinIdleConns: 10,
 	})
+	l.pipe = l.redis.Pipeline()
 	if _, err := l.redis.Ping().Result(); err != nil {
 		return err
 	}
@@ -132,9 +153,10 @@ func (l *Lookup) Close() {
 	if l.Config.Eyewall.NoLocalRedis {
 		return
 	}
-
 	l.redis.Close()
-	l.Unregister()
+	if err := l.Unregister(); err != nil {
+		l.log.Errorf("Error on Lookup Unregister: %s", err.Error())
+	}
 }
 
 // Taste connects to Eye and checks supported API versions
@@ -155,7 +177,6 @@ func (l *Lookup) taste(quick bool) {
 		retryCount = 2
 		timeoutMS = 250
 	}
-
 versionloop:
 	// protocol version array is preference sorted, first hit wins
 	for _, apiVersion := range []int{proto.ProtocolTwo, proto.ProtocolOne} {
@@ -167,9 +188,7 @@ versionloop:
 		if err != nil {
 			l.log.Fatalf("eyewall/cache: malformed eye URL: %s", err.Error())
 		}
-
 		foldSlashes(eyeURL)
-
 		resp, err := resty.New().
 			// set generic client options
 			SetHeader(`Content-Type`, `application/json`).
@@ -231,59 +250,50 @@ versionloop:
 	}
 	switch l.apiVersion {
 	case proto.ProtocolOne:
-		l.eyeLookupURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v1/configuration/{lookID}",
+		l.eyeLookupURL = fmt.Sprintf("http://%s:%s/api/v1/configuration/{lookID}",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeLookupURL)
+		)
 
-		l.eyeCfgGetURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v1/item/{profileID}",
+		l.eyeCfgGetURL = fmt.Sprintf("http://%s:%s/api/v1/item/{profileID}",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeCfgGetURL)
+		)
 	case proto.ProtocolTwo:
-		l.eyeLookupURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/lookup/configuration/{lookID}",
+		l.eyeLookupURL = fmt.Sprintf("http://%s:%s/api/v2/lookup/configuration/{lookID}",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeLookupURL)
+		)
 
-		l.eyeActiveURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/configuration/{profileID}/active",
+		l.eyeActiveURL = fmt.Sprintf("http://%s:%s/api/v2/configuration/{profileID}/active",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeActiveURL)
+		)
 
-		l.eyeRegAddURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/registration/",
+		l.eyeRegAddURL = fmt.Sprintf("http://%s:%s/api/v2/registration/",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeRegAddURL)
+		)
 
-		l.eyeRegDelURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/registration/{registrationID}",
+		l.eyeRegDelURL = fmt.Sprintf("http://%s:%s/api/v2/registration/{registrationID}",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeRegDelURL)
+		)
 
-		l.eyeRegGetURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/lookup/registration/{app}",
+		l.eyeRegGetURL = fmt.Sprintf("http://%s:%s/api/v2/lookup/registration/{app}",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeRegGetURL)
+		)
 
-		l.eyeCfgGetURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/configuration/{profileID}",
+		l.eyeCfgGetURL = fmt.Sprintf("http://%s:%s/api/v2/configuration/{profileID}",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeCfgGetURL)
+		)
 
-		l.eyeActPndURL, _ = url.Parse(fmt.Sprintf("http://%s:%s/api/v2/lookup/activation/",
+		l.eyeActPndURL = fmt.Sprintf("http://%s:%s/api/v2/lookup/activation/",
 			l.Config.Eyewall.Host,
 			l.Config.Eyewall.Port,
-		))
-		foldSlashes(l.eyeActPndURL)
+		)
 	}
 }
 
@@ -437,13 +447,18 @@ func (l *Lookup) lookupRedis(lookID string) (map[string]Threshold, error) {
 	}
 
 	res := make(map[string]Threshold)
-	data, err := l.redis.HGetAll(lookID).Result()
+
+	getall := l.pipe.HGetAll(lookID)
+	_, err := l.pipe.Exec()
 	if err != nil {
 		return nil, err
 	}
+	data := getall.Val()
 	if len(data) == 0 {
 		return nil, ErrNotFound
 	}
+	getMap := make(map[string]*redis.StringCmd)
+
 dataloop:
 	for key := range data {
 		if key == `unconfigured` {
@@ -452,18 +467,21 @@ dataloop:
 			}
 			continue dataloop
 		}
-		val, err := l.redis.Get(key).Result()
-		if err != nil {
-			return nil, err
-		}
-
+		getMap[key] = l.pipe.Get(key)
+	}
+	_, err = l.pipe.Exec()
+	if err != nil {
+		return nil, err
+	}
+	for key := range getMap {
 		t := Threshold{}
-		err = json.Unmarshal([]byte(val), &t)
+		err = json.Unmarshal([]byte(getMap[key].Val()), &t)
 		if err != nil {
 			return nil, err
 		}
 		res[t.ID] = t
 	}
+
 	return res, nil
 }
 
@@ -472,26 +490,22 @@ func (l *Lookup) setUnconfigured(lookID string) {
 	if l.Config.Eyewall.NoLocalRedis {
 		return
 	}
-
-	if _, err := l.redis.HSet(
+	l.pipe.HSet(
 		lookID,
 		`unconfigured`,
 		time.Now().UTC().Format(time.RFC3339),
-	).Result(); err != nil {
-		if l.log != nil {
-			l.log.Errorf("eyewall/cache: %s", err.Error())
-		}
-		return
-	}
+	)
 
-	if _, err := l.redis.Expire(
+	l.pipe.Expire(
 		lookID,
 		l.cacheTimeout,
-	).Result(); err != nil {
-		if l.log != nil {
-			l.log.Errorf("eyewall/cache: %s", err.Error())
-		}
-	}
+	)
+	//	_, err := pipe.Exec()
+	//	if err != nil {
+	//		if l.log != nil {
+	//			l.log.Errorf("eyewall/cache: %s", err.Error())
+	//		}
+	//	}
 }
 
 // storeThreshold writes t into the local cache
@@ -508,36 +522,28 @@ func (l *Lookup) storeThreshold(lookID string, t *Threshold) {
 		return
 	}
 
-	if _, err := l.redis.Set(
+	l.pipe.Set(
 		t.ID,
 		string(buf),
 		l.cacheTimeout,
-	).Result(); err != nil {
-		if l.log != nil {
-			l.log.Errorf("eyewall/cache: %s", err.Error())
-		}
-		return
-	}
+	)
 
-	if _, err := l.redis.HSet(
+	l.pipe.HSet(
 		lookID,
 		t.ID,
 		time.Now().UTC().Format(time.RFC3339),
-	).Result(); err != nil {
-		if l.log != nil {
-			l.log.Errorf("eyewall/cache: %s", err.Error())
-		}
-		return
-	}
+	)
 
-	if _, err := l.redis.Expire(
+	l.pipe.Expire(
 		lookID,
 		l.cacheTimeout,
-	).Result(); err != nil {
-		if l.log != nil {
-			l.log.Errorf("eyewall/cache: %s", err.Error())
-		}
-	}
+	)
+	//	_, err = pipe.Exec()
+	//	if err != nil {
+	//		if l.log != nil {
+	//			l.log.Errorf("eyewall/cache: %s", err.Error())
+	//		}
+	//	}
 }
 
 // APIVersion returns the Eye API version discovered via taste testing

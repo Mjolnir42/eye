@@ -23,7 +23,7 @@ INSERT INTO eye.provisions (
 SELECT $1::uuid,
        $2::uuid,
        tstzrange($3::timestamptz, 'infinity', '[]'),
-       $4::varchar[];
+       $4::varchar[]
 WHERE  NOT EXISTS (
        SELECT dataID
        FROM   eye.provisions

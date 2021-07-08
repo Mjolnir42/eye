@@ -26,15 +26,14 @@ type RegistrationRead struct {
 	stmtSearch *sql.Stmt
 	stmtShow   *sql.Stmt
 	appLog     *logrus.Logger
-	reqLog     *logrus.Logger
-	errLog     *logrus.Logger
 }
 
 // newRegistrationRead return a new RegistrationRead handler with input buffer of length
-func newRegistrationRead(length int) (r *RegistrationRead) {
+func newRegistrationRead(length int, appLog *logrus.Logger) (r *RegistrationRead) {
 	r = &RegistrationRead{}
 	r.Input = make(chan msg.Request, length)
 	r.Shutdown = make(chan struct{})
+	r.appLog = appLog
 	return
 }
 
@@ -44,7 +43,7 @@ func (r *RegistrationRead) process(q *msg.Request) {
 
 	switch q.Action {
 	case msg.ActionList:
-		r.list(q, &result)
+		r.list(&result)
 	case msg.ActionShow:
 		r.show(q, &result)
 	case msg.ActionSearch, msg.ActionRegistration:
@@ -56,20 +55,23 @@ func (r *RegistrationRead) process(q *msg.Request) {
 }
 
 // list returns all registrations by ID
-func (r *RegistrationRead) list(q *msg.Request, mr *msg.Result) {
+func (r *RegistrationRead) list(mr *msg.Result) {
 	var (
 		registrationID string
 		rows           *sql.Rows
 		err            error
 	)
-
+	Section := "Registration"
+	Action := "List"
 	if rows, err = r.stmtList.Query(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
 
 	for rows.Next() {
 		if err = rows.Scan(&registrationID); err != nil {
+			r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 			rows.Close()
 			mr.ServerError(err)
 			return
@@ -79,6 +81,7 @@ func (r *RegistrationRead) list(q *msg.Request, mr *msg.Result) {
 		})
 	}
 	if err = rows.Err(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -93,7 +96,8 @@ func (r *RegistrationRead) show(q *msg.Request, mr *msg.Result) {
 		port, database                       int64
 		registeredAt                         time.Time
 	)
-
+	Section := "Registration"
+	Action := "Show"
 	if err = r.stmtShow.QueryRow(
 		q.Registration.ID,
 	).Scan(
@@ -107,6 +111,7 @@ func (r *RegistrationRead) show(q *msg.Request, mr *msg.Result) {
 		mr.NotFound(err)
 		return
 	} else if err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -133,7 +138,8 @@ func (r *RegistrationRead) search(q *msg.Request, mr *msg.Result) {
 		port, database                       int64
 		registeredAt                         time.Time
 	)
-
+	Section := "Registration"
+	Action := "Search"
 	// set NULL-able query conditions
 	if q.Search.Registration.Application != `` {
 		searchApp.String = q.Search.Registration.Application
@@ -161,6 +167,7 @@ func (r *RegistrationRead) search(q *msg.Request, mr *msg.Result) {
 		searchPort,
 		searchDB,
 	); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -192,6 +199,7 @@ func (r *RegistrationRead) search(q *msg.Request, mr *msg.Result) {
 
 	// check for errors which occurred during iteration
 	if err = rows.Err(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+
 	"github.com/lib/pq"
 	msg "github.com/solnx/eye/internal/eye.msg"
 	"github.com/solnx/eye/lib/eye.proto/v2"
@@ -30,15 +31,14 @@ type LookupRead struct {
 	stmtActivation *sql.Stmt
 	stmtPending    *sql.Stmt
 	appLog         *logrus.Logger
-	reqLog         *logrus.Logger
-	errLog         *logrus.Logger
 }
 
 // newLookupRead return a new LookupRead handler with input buffer of length
-func newLookupRead(length int) (r *LookupRead) {
+func newLookupRead(length int, appLog *logrus.Logger) (r *LookupRead) {
 	r = &LookupRead{}
 	r.Input = make(chan msg.Request, length)
 	r.Shutdown = make(chan struct{})
+	r.appLog = appLog
 	return
 }
 
@@ -56,11 +56,13 @@ func (r *LookupRead) process(q *msg.Request) {
 	default:
 		result.UnknownRequest(q)
 	}
+
 	q.Reply <- result
 }
 
 // configuration returns all configurations matching a specific LookupHash
 func (r *LookupRead) configuration(q *msg.Request, mr *msg.Result) {
+
 	var (
 		configurationID, dataID, configuration string
 		validFrom, validUntil                  time.Time
@@ -70,14 +72,15 @@ func (r *LookupRead) configuration(q *msg.Request, mr *msg.Result) {
 		rows                                   *sql.Rows
 		err                                    error
 	)
-
+	Section := "Lookup"
+	Action := "Configuration"
 	if rows, err = r.stmtCfgLookup.Query(
 		q.LookupHash,
 	); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
-
 	for rows.Next() {
 		if err = rows.Scan(
 			&configurationID,
@@ -90,6 +93,7 @@ func (r *LookupRead) configuration(q *msg.Request, mr *msg.Result) {
 			pq.Array(&tasks),
 			&activatedAt,
 		); err != nil {
+			r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 			mr.ServerError(err)
 			rows.Close()
 			return
@@ -97,6 +101,7 @@ func (r *LookupRead) configuration(q *msg.Request, mr *msg.Result) {
 
 		c := v2.Configuration{}
 		if err = json.Unmarshal([]byte(configuration), &c); err != nil {
+			r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 			mr.ServerError(err)
 			rows.Close()
 			return
@@ -108,7 +113,6 @@ func (r *LookupRead) configuration(q *msg.Request, mr *msg.Result) {
 			c.ActivatedAt = `never`
 		}
 		c.LookupID = q.LookupHash
-
 		d := c.Data[0]
 		d.ID = dataID
 		d.Info = v2.MetaInformation{
@@ -131,6 +135,7 @@ func (r *LookupRead) configuration(q *msg.Request, mr *msg.Result) {
 		mr.Configuration = append(mr.Configuration, c)
 	}
 	if err = rows.Err(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -141,6 +146,7 @@ func (r *LookupRead) configuration(q *msg.Request, mr *msg.Result) {
 		))
 		return
 	}
+
 	mr.OK()
 }
 
@@ -153,10 +159,12 @@ func (r *LookupRead) activation(q *msg.Request, mr *msg.Result) {
 		configurationID, lookupID, dataID, confResult string
 		activatedAt, validFrom, validUntil            time.Time
 	)
-
+	Section := "Lookup"
+	Action := "Activation"
 	if rows, err = r.stmtActivation.Query(
 		q.Search.Since.UTC().Format(time.RFC3339Nano),
 	); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -178,6 +186,7 @@ func (r *LookupRead) activation(q *msg.Request, mr *msg.Result) {
 		configuration := v2.Configuration{}
 		data := v2.Data{}
 		if err = json.Unmarshal([]byte(confResult), &configuration); err != nil {
+			r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 			rows.Close()
 			mr.ServerError(err)
 			return
@@ -195,6 +204,7 @@ func (r *LookupRead) activation(q *msg.Request, mr *msg.Result) {
 		mr.Configuration = append(mr.Configuration, configuration)
 	}
 	if err = rows.Err(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -210,10 +220,12 @@ func (r *LookupRead) pending(q *msg.Request, mr *msg.Result) {
 		configurationID, confResult string
 		provisionedAt               time.Time
 	)
-
+	Section := "Lookup"
+	Action := "Pending"
 	if rows, err = r.stmtPending.Query(
 		q.Search.Since.UTC().Format(time.RFC3339Nano),
 	); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -224,6 +236,7 @@ func (r *LookupRead) pending(q *msg.Request, mr *msg.Result) {
 			&provisionedAt,
 			&confResult,
 		); err != nil {
+			r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 			rows.Close()
 			mr.ServerError(err)
 			return
@@ -231,6 +244,7 @@ func (r *LookupRead) pending(q *msg.Request, mr *msg.Result) {
 		configuration := v2.Configuration{}
 		data := v2.Data{}
 		if err = json.Unmarshal([]byte(confResult), &configuration); err != nil {
+			r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 			rows.Close()
 			mr.ServerError(err)
 			return
@@ -245,6 +259,7 @@ func (r *LookupRead) pending(q *msg.Request, mr *msg.Result) {
 		mr.Configuration = append(mr.Configuration, configuration)
 	}
 	if err = rows.Err(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}

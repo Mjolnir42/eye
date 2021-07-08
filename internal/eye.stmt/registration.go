@@ -58,6 +58,13 @@ WHERE  (application = $1::varchar OR $1::varchar IS NULL)
 SELECT registrationID
 FROM   eye.registry;`
 
+	RegistryGetAll = `
+SELECT registrationID,
+       address,
+	   port,
+       database
+FROM   eye.registry;`
+
 	RegistryShow = `
 SELECT registrationID,
        application,

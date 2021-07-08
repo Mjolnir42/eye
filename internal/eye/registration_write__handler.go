@@ -23,24 +23,23 @@ import (
 func (w *RegistrationWrite) Register(c *sql.DB, l ...*logrus.Logger) {
 	w.conn = c
 	w.appLog = l[0]
-	w.reqLog = l[1]
-	w.errLog = l[2]
 }
 
 // Run is the event loop for RegistrationWrite
 func (w *RegistrationWrite) Run() {
 	var err error
 
-	for statement, prepStmt := range map[string]*sql.Stmt{
-		stmt.RegistryAdd:    w.stmtAdd,
-		stmt.RegistryDel:    w.stmtRemove,
-		stmt.RegistryShow:   w.stmtShow,
-		stmt.RegistryUpdate: w.stmtUpdate,
+	for statement, prepStmt := range map[string]**sql.Stmt{
+		stmt.RegistryAdd:    &w.stmtAdd,
+		stmt.RegistryDel:    &w.stmtRemove,
+		stmt.RegistryShow:   &w.stmtShow,
+		stmt.RegistryUpdate: &w.stmtUpdate,
+		stmt.RegistrySearch: &w.stmtSearch,
 	} {
-		if prepStmt, err = w.conn.Prepare(statement); err != nil {
-			w.errLog.Fatal(`RegistrationWrite`, err, stmt.Name(statement))
+		if *prepStmt, err = w.conn.Prepare(statement); err != nil {
+			w.appLog.Fatal(`RegistrationWrite`, err, stmt.Name(statement))
 		}
-		defer prepStmt.Close()
+		defer (*prepStmt).Close()
 	}
 
 runloop:

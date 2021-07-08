@@ -15,9 +15,9 @@ import (
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
+	uuid "github.com/satori/go.uuid"
 	msg "github.com/solnx/eye/internal/eye.msg"
 	"github.com/solnx/eye/lib/eye.proto/v2"
-	uuid "github.com/satori/go.uuid"
 )
 
 // RegistrationShow accepts requests to retrieve a specific registration
@@ -29,7 +29,7 @@ func (x *Rest) RegistrationShow(w http.ResponseWriter, r *http.Request,
 	request.Section = msg.SectionRegistration
 	request.Action = msg.ActionShow
 	request.Registration.ID = strings.ToLower(params.ByName(`ID`))
-
+	x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, "Action startet")
 	if !x.isAuthorized(&request) {
 		x.replyForbidden(&w, &request, nil)
 		return
@@ -49,18 +49,17 @@ func (x *Rest) RegistrationShow(w http.ResponseWriter, r *http.Request,
 // RegistrationList accepts requests to list all registrations. If r
 // contains URL query parameters that indicate a search request, the
 // returned list will be filtered for those search terms
-func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request,
-	params httprouter.Params) {
+func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	defer panicCatcher(w)
-
 	request := msg.New(r, params)
 	request.Section = msg.SectionRegistration
 	request.Action = msg.ActionList
-
+	x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, "Action startet")
 	// parse URL query parameters to differentiate between ActionList
 	// and ActionSearch. Any number of parameters can be specified at
 	// the same time
 	if err := r.ParseForm(); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
@@ -76,12 +75,14 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request,
 		if iPort, err := strconv.ParseInt(port, 10, 64); err == nil {
 			request.Search.Registration.Port = iPort
 		} else {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyBadRequest(&w, &request, err)
 			return
 		}
 		request.Action = msg.ActionSearch
 		// negative+zero port numbers are invalid
 		if request.Search.Registration.Port <= 0 {
+			x.appLog.Tracef("Section=%s Action=%s Error=%s", request.Section, request.Action, "negative+zero port numbers are invalid")
 			x.replyBadRequest(&w, &request, nil)
 			return
 		}
@@ -93,12 +94,14 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request,
 		if iDb, err := strconv.ParseInt(db, 10, 64); err == nil {
 			request.Search.Registration.Database = iDb
 		} else {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyBadRequest(&w, &request, err)
 			return
 		}
 		request.Action = msg.ActionSearch
 		// negative database numbers are invalid
 		if request.Search.Registration.Database < 0 {
+			x.appLog.Tracef("Section=%s Action=%s Error=%s", request.Section, request.Action, "negative database numbers are invalid")
 			x.replyBadRequest(&w, &request, nil)
 			return
 		}
@@ -111,12 +114,10 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request,
 			request.Search.Registration.Database = -1
 		}
 	}
-
 	if !x.isAuthorized(&request) {
 		x.replyForbidden(&w, &request, nil)
 		return
 	}
-
 	handler := x.handlerMap.Get(`registration_r`)
 	handler.Intake() <- request
 	result := <-request.Reply
@@ -126,19 +127,20 @@ func (x *Rest) RegistrationList(w http.ResponseWriter, r *http.Request,
 // RegistrationAdd accepts requests to add a registration
 func (x *Rest) RegistrationAdd(w http.ResponseWriter, r *http.Request,
 	params httprouter.Params) {
+
 	defer panicCatcher(w)
 
 	request := msg.New(r, params)
 	request.Section = msg.SectionRegistration
 	request.Action = msg.ActionAdd
-
+	x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, "Action startet")
 	cReq := v2.NewRegistrationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
 	request.Registration = *cReq.Registration
-
 	if !x.isAuthorized(&request) {
 		x.replyForbidden(&w, &request, nil)
 		return
@@ -158,15 +160,22 @@ func (x *Rest) RegistrationUpdate(w http.ResponseWriter, r *http.Request,
 	request := msg.New(r, params)
 	request.Section = msg.SectionRegistration
 	request.Action = msg.ActionUpdate
-
+	x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, "Action startet")
 	cReq := v2.NewRegistrationRequest()
 	if err := decodeJSONBody(r, &cReq); err != nil {
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
 	request.Registration = *cReq.Registration
 
 	if request.Registration.ID != params.ByName(`ID`) {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, fmt.Errorf(
+			"Mismatched IDs in update: [%s] vs [%s]",
+			request.Registration.ID,
+			params.ByName(`ID`),
+		))
+
 		x.replyBadRequest(&w, &request, fmt.Errorf(
 			"Mismatched IDs in update: [%s] vs [%s]",
 			request.Registration.ID,
@@ -194,13 +203,7 @@ func (x *Rest) RegistrationRemove(w http.ResponseWriter, r *http.Request,
 	request.Section = msg.SectionRegistration
 	request.Action = msg.ActionRemove
 	request.Registration.ID = params.ByName(`ID`)
-
-	// request body may contain request flag overrides
-	cReq := v2.NewRegistrationRequest()
-	if err := decodeJSONBody(r, &cReq); err != nil {
-		x.replyBadRequest(&w, &request, err)
-		return
-	}
+	x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, "Action startet")
 
 	if !x.isAuthorized(&request) {
 		x.replyForbidden(&w, &request, nil)

@@ -9,6 +9,8 @@
 package rest // import "github.com/solnx/eye/internal/eye.rest"
 
 import (
+	"database/sql"
+
 	msg "github.com/solnx/eye/internal/eye.msg"
 )
 
@@ -34,7 +36,9 @@ func (x *Rest) eyewallCacheRegister(r *msg.Result) {
 	}
 
 	reg := r.Registration[0]
-	x.invl.Register(reg.ID, reg.Address, reg.Port, reg.Database)
+	if err := x.invl.Register(reg.ID, reg.Address, reg.Port, reg.Database); err != nil {
+		x.appLog.Errorf("Could not connect to redis cache %s:%d due to error: %s", reg.Address, reg.Port, err.Error())
+	}
 }
 
 // eyewallCacheUnregister removes a cache from the invalidation registry
@@ -62,10 +66,41 @@ func (x *Rest) eyewallCacheUnregister(r *msg.Result) {
 	x.invl.Unregister(reg.ID)
 }
 
+func (x *Rest) updateRegister() error {
+	var (
+		rows                                    *sql.Rows
+		err                                     error
+		registrationID, address, port, database string
+	)
+	// perform search
+	if rows, err = x.stmtRegisterGetAll.Query(); err != nil {
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", "Invalidation/Rest", "UpdateRegister", err.Error())
+		return err
+	}
+	tmpMap := make(map[string][3]string)
+	// iterate over result list
+	for rows.Next() {
+		if err = rows.Scan(
+			&registrationID,
+			&address,
+			&port,
+			&database,
+		); err != nil {
+			rows.Close()
+			x.appLog.Errorf("Section=%s Action=%s Error=%s", "Invalidation/Rest", "UpdateRegister", err.Error())
+			return err
+		}
+		// build result list
+
+		tmpMap[registrationID] = [3]string{address, port, database}
+	}
+	return x.invl.UpdateAll(tmpMap)
+}
+
 // eyewallCacheInvalidate triggers cache invalidation for results that
 // support it
 func (x *Rest) eyewallCacheInvalidate(r *msg.Result) {
-	if !r.Flags.CacheInvalidation {
+	if !r.Flags.CacheInvalidation || len(r.Configuration) == 0 {
 		return
 	}
 
@@ -85,6 +120,8 @@ func (x *Rest) eyewallCacheInvalidate(r *msg.Result) {
 	default:
 		return
 	}
+	//Update Register of redis servers from database
+	x.updateRegister()
 
 	if !r.Flags.AlarmClearing {
 		// asynchronous active cache invalidation, since no
@@ -100,11 +137,12 @@ func (x *Rest) eyewallCacheInvalidate(r *msg.Result) {
 	// clearing has to be blocked until the invalidation has been
 	// performed
 	done, errors := x.invl.Invalidate(r.Configuration[0].LookupID)
+invalidation_loop:
 	for {
 		select {
 		case <-errors:
 		case <-done:
-			break
+			break invalidation_loop
 		}
 	}
 }

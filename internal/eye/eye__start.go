@@ -21,12 +21,12 @@ func (e *Eye) Start() {
 	e.handlerMap.Run(`supervisor`)
 
 	// start regular handlers
-	e.handlerMap.Add(`configuration_r`, newConfigurationRead(e.conf.Eye.QueueLen))
-	e.handlerMap.Add(`configuration_w`, newConfigurationWrite(e.conf.Eye.QueueLen))
-	e.handlerMap.Add(`deployment_w`, newDeploymentWrite(e.conf.Eye.QueueLen))
-	e.handlerMap.Add(`lookup_r`, newLookupRead(e.conf.Eye.QueueLen))
-	e.handlerMap.Add(`registration_r`, newRegistrationRead(e.conf.Eye.QueueLen))
-	e.handlerMap.Add(`registration_w`, newRegistrationWrite(e.conf.Eye.QueueLen))
+	e.handlerMap.Add(`configuration_r`, newConfigurationRead(e.conf.Eye.QueueLen, e.appLog))
+	e.handlerMap.Add(`configuration_w`, newConfigurationWrite(e.conf.Eye.QueueLen, e.appLog))
+	e.handlerMap.Add(`deployment_w`, newDeploymentWrite(e.conf.Eye.QueueLen, e.appLog))
+	e.handlerMap.Add(`lookup_r`, newLookupRead(e.conf.Eye.QueueLen, e.appLog))
+	e.handlerMap.Add(`registration_r`, newRegistrationRead(e.conf.Eye.QueueLen, e.appLog))
+	e.handlerMap.Add(`registration_w`, newRegistrationWrite(e.conf.Eye.QueueLen, e.appLog))
 
 	for handler := range e.handlerMap.Range() {
 		switch handler {

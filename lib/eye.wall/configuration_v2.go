@@ -26,7 +26,7 @@ func (l *Lookup) v2ConfigurationShow(profileID string) (*proto.Result, error) {
 		SetPathParams(map[string]string{
 			`profileID`: profileID,
 		}).Get(
-		l.eyeCfgGetURL.String(),
+		l.eyeCfgGetURL,
 	); err != nil {
 		return nil, fmt.Errorf("eyewall.v2ConfigurationShow: %s", err.Error())
 	}

@@ -35,15 +35,14 @@ type ConfigurationRead struct {
 	stmtProvInfo       *sql.Stmt
 	stmtCfgVersion     *sql.Stmt
 	appLog             *logrus.Logger
-	reqLog             *logrus.Logger
-	errLog             *logrus.Logger
 }
 
 // newConfigurationRead return a new ConfigurationRead handler with input buffer of length
-func newConfigurationRead(length int) (r *ConfigurationRead) {
+func newConfigurationRead(length int, appLog *logrus.Logger) (r *ConfigurationRead) {
 	r = &ConfigurationRead{}
 	r.Input = make(chan msg.Request, length)
 	r.Shutdown = make(chan struct{})
+	r.appLog = appLog
 	return
 }
 
@@ -55,7 +54,7 @@ func (r *ConfigurationRead) process(q *msg.Request) {
 	case msg.ActionHistory:
 		r.history(q, &result)
 	case msg.ActionList:
-		r.list(q, &result)
+		r.list(&result)
 	case msg.ActionShow:
 		r.show(q, &result)
 	case msg.ActionVersion:
@@ -67,14 +66,16 @@ func (r *ConfigurationRead) process(q *msg.Request) {
 }
 
 // list returns all configurations by ID
-func (r *ConfigurationRead) list(q *msg.Request, mr *msg.Result) {
+func (r *ConfigurationRead) list(mr *msg.Result) {
 	var (
 		configurationID string
 		rows            *sql.Rows
 		err             error
 	)
-
+	Section := "Configuration"
+	Action := "List"
 	if rows, err = r.stmtCfgList.Query(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -82,6 +83,7 @@ func (r *ConfigurationRead) list(q *msg.Request, mr *msg.Result) {
 	for rows.Next() {
 		if err = rows.Scan(&configurationID); err != nil {
 			rows.Close()
+			r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 			mr.ServerError(err)
 			return
 		}
@@ -90,6 +92,7 @@ func (r *ConfigurationRead) list(q *msg.Request, mr *msg.Result) {
 		})
 	}
 	if err = rows.Err(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -108,9 +111,11 @@ func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
 		provisionTS, deprovisionTS, activatedAt time.Time
 		tx                                      *sql.Tx
 	)
-
+	Section := "Configuration"
+	Action := "Show"
 	// open transaction
 	if tx, err = r.conn.Begin(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -188,6 +193,7 @@ func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
 	mr.Configuration = append(mr.Configuration, configuration)
 
 	if err = tx.Commit(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -195,11 +201,11 @@ func (r *ConfigurationRead) show(q *msg.Request, mr *msg.Result) {
 	return
 
 abort:
+	r.appLog.Debugf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 	mr.ServerError(err)
 
 rollback:
 	tx.Rollback()
-	return
 }
 
 // history returns the full data history for a configuration
@@ -214,12 +220,14 @@ func (r *ConfigurationRead) history(q *msg.Request, mr *msg.Result) {
 		tasks                                   []string
 		configuration                           v2.Configuration
 	)
-
+	Section := "Configuration"
+	Action := "History"
 	configuration.ID = q.Configuration.ID
 	configuration.Data = []v2.Data{}
 
 	// open transaction
 	if tx, err = r.conn.Begin(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -330,15 +338,14 @@ func (r *ConfigurationRead) history(q *msg.Request, mr *msg.Result) {
 		data.Info.ProvisionedAt = v2.FormatProvision(provisionTS)
 		data.Info.DeprovisionedAt = v2.FormatProvision(deprovisionTS)
 		data.Info.Tasks = make([]string, len(tasks))
-		for i := range tasks {
-			data.Info.Tasks[i] = tasks[i]
-		}
+		copy(data.Info.Tasks, tasks)
 
 		configuration.Data[idx] = data
 	}
 	mr.Configuration = append(mr.Configuration, configuration)
 
 	if err = tx.Commit(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -346,11 +353,11 @@ func (r *ConfigurationRead) history(q *msg.Request, mr *msg.Result) {
 	return
 
 abort:
+	r.appLog.Debugf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 	mr.ServerError(err)
 
 rollback:
 	tx.Rollback()
-	return
 }
 
 // version returns an arbitrary version of specific configuration
@@ -367,9 +374,11 @@ func (r *ConfigurationRead) version(q *msg.Request, mr *msg.Result) {
 		optionalValidAt                         pq.NullTime
 		optionalDataID                          sql.NullString
 	)
-
+	Section := "Configuration"
+	Action := "Version"
 	// open transaction
 	if tx, err = r.conn.Begin(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -454,6 +463,7 @@ func (r *ConfigurationRead) version(q *msg.Request, mr *msg.Result) {
 	mr.Configuration = append(mr.Configuration, configuration)
 
 	if err = tx.Commit(); err != nil {
+		r.appLog.Errorf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 		mr.ServerError(err)
 		return
 	}
@@ -461,11 +471,11 @@ func (r *ConfigurationRead) version(q *msg.Request, mr *msg.Result) {
 	return
 
 abort:
+	r.appLog.Debugf("Section=%s Action=%s Error=%s", Section, Action, err.Error())
 	mr.ServerError(err)
 
 rollback:
 	tx.Rollback()
-	return
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

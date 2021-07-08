@@ -27,7 +27,6 @@ func (x *Rest) LookupConfiguration(w http.ResponseWriter, r *http.Request,
 	request.Section = msg.SectionLookup
 	request.Action = msg.ActionConfiguration
 	request.LookupHash = strings.ToLower(params.ByName(`hash`))
-
 	if !x.isAuthorized(&request) {
 		x.replyForbidden(&w, &request, nil)
 		return
@@ -35,6 +34,9 @@ func (x *Rest) LookupConfiguration(w http.ResponseWriter, r *http.Request,
 
 	// lookup is to be performed via SHA2/256 hash
 	if len(request.LookupHash) != 64 {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s Hash=%s", request.Section, request.Action, fmt.Errorf(
+			`Invalid SHA2-256 lookup hash format`,
+		), request.LookupHash)
 		x.replyBadRequest(&w, &request, fmt.Errorf(
 			`Invalid SHA2-256 lookup hash format`,
 		))
@@ -85,6 +87,7 @@ func (x *Rest) LookupActivation(w http.ResponseWriter, r *http.Request,
 	// and ActionSearch. Any number of parameters can be specified at
 	// the same time
 	if err := r.ParseForm(); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
@@ -96,6 +99,7 @@ func (x *Rest) LookupActivation(w http.ResponseWriter, r *http.Request,
 			activatedSince,
 			&request.Search.Since,
 		); err != nil {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyBadRequest(&w, &request, err)
 			return
 		}
@@ -111,6 +115,7 @@ func (x *Rest) LookupActivation(w http.ResponseWriter, r *http.Request,
 		var val bool
 		var err error
 		if val, err = strconv.ParseBool(pending); err != nil {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyBadRequest(&w, &request, err)
 			return
 		}

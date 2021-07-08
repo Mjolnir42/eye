@@ -23,10 +23,10 @@ import (
 	"time"
 
 	"github.com/asaskevich/govalidator"
+	"github.com/mjolnir42/soma/lib/proto"
 	msg "github.com/solnx/eye/internal/eye.msg"
 	eyeproto "github.com/solnx/eye/lib/eye.proto"
 	"github.com/solnx/eye/lib/eye.proto/v2"
-	"github.com/mjolnir42/soma/lib/proto"
 )
 
 func panicCatcher(w http.ResponseWriter) {
@@ -45,6 +45,9 @@ func decodeJSONBody(r *http.Request, s interface{}) (err error) {
 	case *proto.PushNotification:
 		c := s.(*proto.PushNotification)
 		err = decoder.Decode(c)
+	case *v2.Request:
+		c := s.(*v2.Request)
+		err = decoder.Decode(c)
 	default:
 		err = fmt.Errorf("decodeJSONBody: unhandled request type: %s", reflect.TypeOf(s))
 	}
@@ -54,12 +57,13 @@ func decodeJSONBody(r *http.Request, s interface{}) (err error) {
 // processDeploymentDetails creates an eye protocol configuration from
 // SOMA deployment details
 func processDeploymentDetails(details *proto.Deployment) (string, v2.Configuration, error) {
-	lookupID := calculateLookupID(details.Node.AssetID, details.Metric.Path)
+	lookupID := calculateLookupID(details.Node.Name, details.Metric.Path)
 
 	config := v2.Configuration{
-		HostID: details.Node.AssetID,
-		ID:     details.CheckInstance.InstanceID,
-		Metric: details.Metric.Path,
+		Hostname: details.Node.Name,
+		HostID:   details.Node.AssetID,
+		ID:       details.CheckInstance.InstanceID,
+		Metric:   details.Metric.Path,
 	}
 	data := v2.Data{
 		Interval:   details.CheckConfig.Interval,
@@ -68,22 +72,6 @@ func processDeploymentDetails(details *proto.Deployment) (string, v2.Configurati
 		Thresholds: []v2.Threshold{},
 	}
 
-	// append filesystem to disk metrics
-	switch config.Metric {
-	case
-		`disk.write.per.second`,
-		`disk.read.per.second`,
-		`disk.free`,
-		`disk.usage.percent`:
-		mountpoint := getServiceAttributeValue(details, `filesystem`)
-		if mountpoint == `` {
-			return ``, v2.Configuration{}, fmt.Errorf("Disk metric %s is missing filesystem service attribute", config.Metric)
-		}
-
-		// update metric path and recalculate updated lookupID
-		config.Metric = fmt.Sprintf("%s:%s", config.Metric, mountpoint)
-		lookupID = calculateLookupID(details.Node.AssetID, details.Metric.Path)
-	}
 	config.LookupID = lookupID
 
 	// set oncall duty
@@ -111,7 +99,7 @@ func processDeploymentDetails(details *proto.Deployment) (string, v2.Configurati
 	}
 	config.Data = []v2.Data{data}
 
-	govalidator.SetFieldsRequiredByDefault(true)
+	govalidator.SetFieldsRequiredByDefault(false)
 	if ok, err := govalidator.ValidateStruct(config); !ok {
 		return ``, v2.Configuration{}, err
 	}
@@ -120,10 +108,9 @@ func processDeploymentDetails(details *proto.Deployment) (string, v2.Configurati
 
 // calculateLookupID returns the lookupID hash for a given (id,metric)
 // tuple
-func calculateLookupID(id uint64, metric string) string {
-	asset := strconv.FormatUint(id, 10)
+func calculateLookupID(host, metric string) string {
 	hash := sha256.New()
-	hash.Write([]byte(asset))
+	hash.Write([]byte(host))
 	hash.Write([]byte(metric))
 
 	return hex.EncodeToString(hash.Sum(nil))
@@ -264,14 +251,13 @@ func resolveFlags(rqProtocol *v2.Request, rqInternal *msg.Request) error {
 
 // foldSlashes collapses sequences of multiple consecutive / characters
 func foldSlashes(u *url.URL) {
-	o := u.RequestURI()
-
-	for u.Path = strings.Replace(
-		u.RequestURI(), `//`, `/`, -1,
-	); o != u.RequestURI(); u.Path = strings.Replace(
-		u.RequestURI(), `//`, `/`, -1,
+	o := u.RawPath
+	for u.RawPath = strings.Replace(
+		u.RawPath, `//`, `/`, -1,
+	); o != u.RawPath; u.RawPath = strings.Replace(
+		u.RawPath, `//`, `/`, -1,
 	) {
-		o = u.RequestURI()
+		o = u.RawPath
 	}
 }
 

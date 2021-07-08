@@ -22,7 +22,6 @@ func (l *Lookup) Register() error {
 	case proto.ProtocolTwo:
 		return l.v2Register()
 	}
-
 	return ErrProtocol
 }
 

@@ -16,10 +16,10 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
+	uuid "github.com/satori/go.uuid"
 	msg "github.com/solnx/eye/internal/eye.msg"
 	"github.com/solnx/eye/lib/eye.proto/v1"
 	"github.com/solnx/eye/lib/eye.proto/v2"
-	uuid "github.com/satori/go.uuid"
 )
 
 // ConfigurationShow accepts requests to retrieve a specific
@@ -34,6 +34,7 @@ func (x *Rest) ConfigurationShow(w http.ResponseWriter, r *http.Request,
 	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
@@ -82,6 +83,7 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 	case msg.ProtocolOne:
 		cReq := &v1.ConfigurationItem{}
 		if err := decodeJSONBody(r, cReq); err != nil {
+			x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyUnprocessableEntity(&w, &request, err)
 			return
 		}
@@ -90,6 +92,7 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 	case msg.ProtocolTwo:
 		cReq := v2.NewConfigurationRequest()
 		if err := decodeJSONBody(r, &cReq); err != nil {
+			x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyUnprocessableEntity(&w, &request, err)
 			return
 		}
@@ -97,6 +100,7 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 
 		// only the v2 API has request flags
 		if err := resolveFlags(&cReq, &request); err != nil {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyBadRequest(&w, &request, err)
 			return
 		}
@@ -108,7 +112,7 @@ func (x *Rest) ConfigurationAdd(w http.ResponseWriter, r *http.Request,
 
 	request.Configuration.InputSanatize()
 	request.LookupHash = calculateLookupID(
-		request.Configuration.HostID,
+		request.Configuration.Hostname,
 		request.Configuration.Metric,
 	)
 	request.Configuration.LookupID = request.LookupHash
@@ -139,6 +143,7 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	case msg.ProtocolOne:
 		cReq := &v1.ConfigurationItem{}
 		if err := decodeJSONBody(r, cReq); err != nil {
+			x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyUnprocessableEntity(&w, &request, err)
 			return
 		}
@@ -147,6 +152,7 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	case msg.ProtocolTwo:
 		cReq := v2.NewConfigurationRequest()
 		if err := decodeJSONBody(r, &cReq); err != nil {
+			x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyUnprocessableEntity(&w, &request, err)
 			return
 		}
@@ -154,6 +160,7 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 
 		// only the v2 API has request flags
 		if err := resolveFlags(&cReq, &request); err != nil {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyBadRequest(&w, &request, err)
 			return
 		}
@@ -165,12 +172,17 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 
 	request.Configuration.InputSanatize()
 	request.LookupHash = calculateLookupID(
-		request.Configuration.HostID,
+		request.Configuration.Hostname,
 		request.Configuration.Metric,
 	)
 	request.Configuration.LookupID = request.LookupHash
 
 	if request.Configuration.ID != strings.ToLower(params.ByName(`ID`)) {
+		x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, fmt.Errorf(
+			"Mismatched IDs in update: [%s] vs [%s]",
+			request.Configuration.ID,
+			strings.ToLower(params.ByName(`ID`)),
+		))
 		x.replyBadRequest(&w, &request, fmt.Errorf(
 			"Mismatched IDs in update: [%s] vs [%s]",
 			request.Configuration.ID,
@@ -179,6 +191,7 @@ func (x *Rest) ConfigurationUpdate(w http.ResponseWriter, r *http.Request,
 	}
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
@@ -207,6 +220,7 @@ func (x *Rest) ConfigurationRemove(w http.ResponseWriter, r *http.Request,
 	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
@@ -216,11 +230,13 @@ func (x *Rest) ConfigurationRemove(w http.ResponseWriter, r *http.Request,
 	if request.Version != msg.ProtocolOne {
 		cReq := v2.NewConfigurationRequest()
 		if err := decodeJSONBody(r, &cReq); err != nil {
+			x.appLog.Errorf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyBadRequest(&w, &request, err)
 			return
 		}
 
 		if err := resolveFlags(&cReq, &request); err != nil {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyBadRequest(&w, &request, err)
 			return
 		}
@@ -250,6 +266,7 @@ func (x *Rest) ConfigurationActivate(w http.ResponseWriter, r *http.Request,
 	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
@@ -277,6 +294,7 @@ func (x *Rest) ConfigurationHistory(w http.ResponseWriter, r *http.Request,
 	request.Configuration.ID = strings.ToLower(params.ByName(`ID`))
 
 	if _, err := uuid.FromString(request.Configuration.ID); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
@@ -315,6 +333,7 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 	if _, err = uuid.FromString(
 		request.Search.Configuration.ID,
 	); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, err)
 		return
 	}
@@ -327,6 +346,7 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 	))
 	if dataID != `` {
 		if _, err = uuid.FromString(dataID); err != nil {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyBadRequest(&w, &request, err)
 			return
 		}
@@ -341,6 +361,7 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 	// optional, but if it is set then it must be a parsable RFC3339
 	// timestamp
 	if err = r.ParseForm(); err != nil {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyInternalError(&w, &request, err)
 		return
 	}
@@ -349,6 +370,7 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 			time.RFC3339Nano,
 			valid,
 		); err != nil {
+			x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 			x.replyInternalError(&w, &request, err)
 			return
 		}
@@ -358,6 +380,7 @@ func (x *Rest) ConfigurationVersion(w http.ResponseWriter, r *http.Request,
 	// while both dataID and valid are optional, one of them must be
 	// provided
 	if request.Search.ValidAt.IsZero() && dataID == `` {
+		x.appLog.Debugf("Section=%s Action=%s Error=%s", request.Section, request.Action, err.Error())
 		x.replyBadRequest(&w, &request, nil)
 		return
 	}

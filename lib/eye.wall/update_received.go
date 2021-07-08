@@ -10,13 +10,7 @@ package wall // import "github.com/solnx/eye/lib/eye.wall"
 
 // UpdateReceived increments the counter of received metrics
 func (l *Lookup) UpdateReceived() {
-	if _, err := l.redis.Incr(
-		`received_metrics`,
-	).Result(); err != nil {
-		if l.log != nil {
-			l.log.Errorf("eyewall/updateReceived: %s", err.Error())
-		}
-	}
+	l.pipe.Incr(`received_metrics`)
 }
 
 // resetReceived is called during startup to reset the number of
